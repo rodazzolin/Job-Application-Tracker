@@ -1,0 +1,12 @@
+﻿@{
+    ViewData["Title"] = "Job Applications";
+}
+@model List<JobApplication>
+
+<div class="text-center">
+    <h1 class="display-4">Jobs</h1>
+    @foreach(JobApplication jobApp in Model)
+    {
+        <li>@jobApp.Title at @jobApp.Company.Name</li>
+    }
+</div>
