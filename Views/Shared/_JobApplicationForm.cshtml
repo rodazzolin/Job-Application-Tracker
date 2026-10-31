@@ -1,0 +1,47 @@
+@model JobApplicationFormViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="mb-3">
+    <label asp-for="Title" class="form-label"></label>
+    <input asp-for="Title" class="form-control" />
+    <span asp-validation-for="Title" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="CompanyName" class="form-label"></label>
+    <input asp-for="CompanyName" class="form-control" />
+    <span asp-validation-for="CompanyName" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Location" class="form-label"></label>
+    <input asp-for="Location" class="form-control" />
+    <span asp-validation-for="Location" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PostingURL" class="form-label"></label>
+    <input asp-for="PostingURL" class="form-control" />
+    <span asp-validation-for="PostingURL" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Status" class="form-label"></label>
+    <select asp-for="Status" asp-items="Html.GetEnumSelectList<JobApplicationStatus>()" class="form-select"></select>
+    <span asp-validation-for="Status" class="text-danger"></span>
+</div>
+
+<div class="mb-3 collapse" id="applied-at-group">
+    <label asp-for="AppliedAt" class="form-label"></label>
+    <input asp-for="AppliedAt" class="form-control" />
+    <span asp-validation-for="AppliedAt" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PostedAt" class="form-label"></label>
+    <input asp-for="PostedAt" class="form-control" />
+    <span asp-validation-for="PostedAt" class="text-danger"></span>
+</div>
+
+

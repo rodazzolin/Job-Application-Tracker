@@ -5,8 +5,15 @@
 
 <div class="text-center">
     <h1 class="display-4">Jobs</h1>
-    @foreach(JobApplication jobApp in Model)
-    {
-        <li>@jobApp.Title at @jobApp.Company.Name</li>
-    }
+    <ul class="list-group">
+        @foreach(JobApplication jobApp in Model)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                @jobApp.Title at @jobApp.Company.Name 
+                <a asp-action="Edit" asp-route-id="@jobApp.ID" class="btn btn-sm btn-outline-primary ms-2">Edit</a>
+            </li>
+        }
+    </ul>
+    
+    <a asp-action="Create" class="btn btn-primary mt-3">Add job</a>
 </div>
