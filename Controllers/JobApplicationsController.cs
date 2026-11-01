@@ -120,10 +120,23 @@ public class JobApplicationsController : Controller
         jobApp.Title = form.Title;
         jobApp.Company = company;
         jobApp.Location = form.Location;
-        jobApp.Status = form.Status;
         jobApp.PostingURL = form.PostingURL;
         jobApp.PostedAt = form.PostedAt;
         jobApp.AppliedAt = form.Status.Equals(JobApplicationStatus.Saved) ? null : form.AppliedAt;
+
+        // If status changed, instantiate a new StatusChange table.
+        JobApplicationStatus oldStatus = jobApp.Status;
+        JobApplicationStatus newStatus = form.Status;
+        if(!oldStatus.Equals(newStatus))
+        {
+            JobApplicationStatusChange statusChange = new() { 
+                JobApplication = jobApp,
+                OldStatus = oldStatus,
+                NewStatus = newStatus,
+                Time = DateTime.UtcNow
+            };
+            context.StatusChanges.Add(statusChange);
+        }
 
         // Increment timestamp.
         jobApp.UpdatedAt = DateTime.UtcNow;
@@ -140,11 +153,20 @@ public class JobApplicationsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        JobApplication? jobApp = await context.JobApplications.Where(x => x.UserID == UserID).FirstOrDefaultAsync(j => j.ID == id);
+        JobApplication? jobApp = await context.JobApplications.FirstOrDefaultAsync(j => j.ID == id && j.UserID == UserID);
         if(jobApp is null)
             return NotFound();
         
         context.JobApplications.Remove(jobApp);
+
+        // Deletes company if it just became orphaned.
+        bool hasOtherJobs = await context.JobApplications.AnyAsync(j => j.CompanyID == jobApp.CompanyID && j.ID != jobApp.ID);
+        if(!hasOtherJobs)
+        {
+            Company? company = await context.Companies.FindAsync(jobApp.CompanyID);            
+            context.Companies.Remove(jobApp.Company);
+        }
+            
         await context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }

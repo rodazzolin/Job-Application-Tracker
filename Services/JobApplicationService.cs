@@ -19,4 +19,5 @@ public class JobApplicationService
             company = new() {Name = companyName, UserID = userID};
         return company;
     }
+
 }
