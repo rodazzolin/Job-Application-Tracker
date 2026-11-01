@@ -11,7 +11,7 @@ I'm learning this stack: when a change introduces a backend concept I haven't us
 ## Rules
 - **Per-user scoping:** `JobApplicationsController` is `[Authorize]`. Every query filters by `UserID` (NameIdentifier claim), including new ones. Single-record lookups use ID *and* UserID and return `NotFound()` when missing.
 - **Forms:** never bind entities from forms; use view models. POST actions use `[ValidateAntiForgeryToken]` and redirect on success (Post/Redirect/Get). Cross-field validation goes in the view model's `IValidatableObject.Validate`.
-- **Enums are stored as strings** (`JobApplicationStatus`). Never rename or reorder members (see job-form.js gotcha); appending is fine if it fits `FieldLengths.Status`.
+- **Enums are stored as strings** (`JobApplicationStatus`). Never rename or reorder members (see job-form.js gotcha); appending is fine if it fits `FieldLengths.Status`. Removing/merging members needs a hand-written data migration (EF sees no change); see `ConsolidateArchivedStatus`. Int value 4 is retired (was Withdrawn); don't reuse it.
 - **Field lengths** live only in `Models/FieldLengths.cs` (used by EF config and view-model attributes).
 - **Keys are `int`.** Don't change key types; it breaks migrations.
 - **Times:** timestamps (`CreatedAt`, `UpdatedAt`, status change `Time`) are UTC `DateTime`; real-world dates (`PostedAt`, `AppliedAt`) are `DateOnly`.

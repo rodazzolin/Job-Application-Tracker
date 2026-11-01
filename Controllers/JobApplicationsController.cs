@@ -23,18 +23,36 @@ public class JobApplicationsController : Controller
     }
 
     // Shows the user's jobs as a Kanban board, most recently updated first in each column.
+    // `range` comes from the query string (e.g. ?range=LastMonth) and limits jobs by UpdatedAt.
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(JobBoardRange range = JobBoardRange.Last3Months)
     {
-        // Fetches job applications for the user, sorted by newest.
-        List<JobApplication> jobApplications = await context.JobApplications
-            .Where(x => x.UserID == UserID)
-            .Include(x => x.Company)
+        // Fall back to the default on an unknown value (e.g. a hand-edited URL).
+        if(!ModelState.IsValid || !Enum.IsDefined(range))
+            range = JobBoardRange.Last3Months;
+
+        // Fetches the user's jobs, optionally limited to the selected time range.
+        IQueryable<JobApplication> query = context.JobApplications.Where(x => x.UserID == UserID);
+        DateTime? cutoff = range.GetCutoff(DateTime.UtcNow);
+        if(cutoff is not null)
+            query = query.Where(x => x.UpdatedAt >= cutoff);
+
+        // Project straight into card view models, so SQL only selects the columns the cards use.
+        // StatusSince = latest status change, or CreatedAt if the status never changed.
+        List<JobCardViewModel> jobApplications = await query
             .OrderByDescending(x => x.UpdatedAt)
+            .Select(x => new JobCardViewModel
+            {
+                ID = x.ID,
+                Title = x.Title,
+                CompanyName = x.Company.Name,
+                Status = x.Status,
+                StatusSince = x.StatusChanges.Max(s => (DateTime?)s.Time) ?? x.CreatedAt,
+            })
             .ToListAsync();
 
         // In-line helper to filter jobs by status.
-        List<JobApplication> InStatus(params JobApplicationStatus[] statuses) =>
+        List<JobCardViewModel> InStatus(params JobApplicationStatus[] statuses) =>
             jobApplications.Where(j => statuses.Contains(j.Status)).ToList();
 
         // In-line helper to create a column for the board.
@@ -44,6 +62,7 @@ public class JobApplicationsController : Controller
         // Instantiates the view model for the board and populates it with columns and jobs.
         JobBoardViewModel board = new()
         {
+            Range = range,
             Columns =
             [
                 Column("Saved", JobApplicationStatus.Saved),
@@ -51,7 +70,7 @@ public class JobApplicationsController : Controller
                 Column("Interviewing", JobApplicationStatus.Interviewing),
                 Column("Offers", JobApplicationStatus.OfferReceived),
             ],
-            Closed = InStatus(JobApplicationStatus.Rejected, JobApplicationStatus.Withdrawn),
+            Archived = InStatus(JobApplicationStatus.Archived),
         };
         return View(board);
     }

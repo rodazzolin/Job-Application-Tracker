@@ -1,12 +1,15 @@
-@model JobApplication
+@model JobCardViewModel
 
 <a asp-action="Details" asp-route-id="@Model.ID"
    class="job-card status-@Model.Status.ToString().ToLowerInvariant()"
-   data-id="@Model.ID" data-status="@Model.Status">
+   data-id="@Model.ID" data-status="@Model.Status" draggable="false">
     <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="company-monogram">@char.ToUpperInvariant(Model.Company.Name[0])</span>
-        <span class="job-card-company text-truncate">@Model.Company.Name</span>
+        <span class="company-monogram">@char.ToUpperInvariant(Model.CompanyName[0])</span>
+        <span class="job-card-company text-truncate">@Model.CompanyName</span>
     </div>
     <div class="job-card-title">@Model.Title</div>
-    <span class="status-badge mt-2">@Model.Status.GetDisplayName()</span>
+    <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+        <span class="status-badge">@Model.Status.GetDisplayName()</span>
+        <span class="job-card-age" title="@Html.DisplayNameFor(m => m.StatusAgeLabel)">@Model.StatusAgeLabel</span>
+    </div>
 </a>

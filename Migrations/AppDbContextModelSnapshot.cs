@@ -363,7 +363,7 @@ namespace JobTracker.Migrations
             modelBuilder.Entity("JobTracker.Models.JobApplicationStatusChange", b =>
                 {
                     b.HasOne("JobTracker.Models.JobApplication", "JobApplication")
-                        .WithMany()
+                        .WithMany("StatusChanges")
                         .HasForeignKey("JobApplicationID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -425,6 +425,11 @@ namespace JobTracker.Migrations
             modelBuilder.Entity("JobTracker.Models.Company", b =>
                 {
                     b.Navigation("Applications");
+                });
+
+            modelBuilder.Entity("JobTracker.Models.JobApplication", b =>
+                {
+                    b.Navigation("StatusChanges");
                 });
 #pragma warning restore 612, 618
         }

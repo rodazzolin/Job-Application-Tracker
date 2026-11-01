@@ -1,7 +1,7 @@
 ﻿@model JobBoardViewModel
 @{
     ViewData["Title"] = "Application Tracker";
-    JobApplicationStatus[] closedStatuses = [JobApplicationStatus.Rejected, JobApplicationStatus.Withdrawn];
+    JobApplicationStatus archived = JobApplicationStatus.Archived;
 }
 
 @* Token the board script sends with each status update (anti-forgery). *@
@@ -9,7 +9,19 @@
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <h1 class="page-title mb-0">Application Tracker</h1>
-    <a asp-action="Create" class="btn btn-primary">+ Add job</a>
+    <div class="d-flex align-items-center gap-2">
+        @* GET form: changing the range reloads the board with ?range=... (auto-submitted by job-board.js). *@
+        <form id="range-form" method="get" asp-action="Index">
+            <select name="range" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Range)">
+                @foreach (JobBoardRange range in Enum.GetValues<JobBoardRange>())
+                {
+                    <option value="@range" selected="@(range == Model.Range)">@range.GetDisplayName()</option>
+                }
+            </select>
+            <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
+        </form>
+        <a asp-action="Create" class="btn btn-primary text-nowrap">+ Add job</a>
+    </div>
 </div>
 
 <div id="job-board" class="job-board" data-update-url="@Url.Action("UpdateStatus")">
@@ -22,7 +34,7 @@
             </header>
 
             <div class="board-list" data-status="@column.Status" data-status-label="@column.Status.GetDisplayName()">
-                @foreach (JobApplication jobApp in column.Jobs)
+                @foreach (JobCardViewModel jobApp in column.Jobs)
                 {
                     <partial name="_JobCard" model="jobApp" />
                 }
@@ -32,25 +44,22 @@
     }
 </div>
 
-<section id="closed-section" class="@(Model.Closed.Count == 0 ? "d-none" : "")">
-    <h2 class="section-title mt-5 mb-3">Closed</h2>
-    <div id="closed-list" class="job-grid">
-        @foreach (JobApplication jobApp in Model.Closed)
+<section id="archived-section" class="@(Model.Archived.Count == 0 ? "d-none" : "")">
+    <h2 class="section-title mt-5 mb-3">Archived</h2>
+    <div id="archived-list" class="job-grid">
+        @foreach (JobCardViewModel jobApp in Model.Archived)
         {
             <partial name="_JobCard" model="jobApp" />
         }
     </div>
 </section>
 
-@* Drop targets for closing a job. Shown only while a card is being dragged. *@
+@* Drop target for archiving a job. Shown only while a card is being dragged. *@
 <div id="drop-zones" class="drop-zones" aria-hidden="true">
-    @foreach (JobApplicationStatus status in closedStatuses)
-    {
-        <div class="drop-zone status-@status.ToString().ToLowerInvariant()"
-             data-status="@status" data-status-label="@status.GetDisplayName()">
-            <span class="drop-zone-label">Move to @status.GetDisplayName()</span>
-        </div>
-    }
+    <div class="drop-zone status-@archived.ToString().ToLowerInvariant()"
+         data-status="@archived" data-status-label="@archived.GetDisplayName()">
+        <span class="drop-zone-label">Archive</span>
+    </div>
 </div>
 
 @* Error toast for failed updates. *@

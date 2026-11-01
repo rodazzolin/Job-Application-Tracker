@@ -8,8 +8,8 @@
 
     const updateUrl = board.dataset.updateUrl;
     const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-    const closedSection = document.getElementById("closed-section");
-    const closedList = document.getElementById("closed-list");
+    const archivedSection = document.getElementById("archived-section");
+    const archivedList = document.getElementById("archived-list");
     const toast = bootstrap.Toast.getOrCreateInstance(document.getElementById("board-toast"));
 
     // Time the last real drag ended, used to swallow the click that follows a drop.
@@ -25,14 +25,14 @@
         card.querySelector(".status-badge").textContent = label;
     }
 
-    // Recomputes column counts, empty placeholders and Closed visibility from the DOM.
+    // Recomputes column counts, empty placeholders and Archived visibility from the DOM.
     function refreshCounts() {
         board.querySelectorAll(".board-column").forEach(column => {
             const count = column.querySelectorAll(".job-card").length;
             column.querySelector(".board-column-count").textContent = count;
             column.querySelector(".board-column-empty").classList.toggle("d-none", count > 0);
         });
-        closedSection.classList.toggle("d-none", !closedList.querySelector(".job-card"));
+        archivedSection.classList.toggle("d-none", !archivedList.querySelector(".job-card"));
     }
 
     async function saveStatus(id, status) {
@@ -57,13 +57,16 @@
             next: evt.from.children[evt.oldIndex] ?? null,
             status: card.dataset.status,
             label: card.querySelector(".status-badge").textContent,
+            age: card.querySelector(".job-card-age").textContent,
         };
 
         // Update the UI first so the move feels instant.
         // Columns are ordered by last update, so a moved card goes to the top;
-        // cards dropped on a drop zone go to the Closed grid.
+        // cards dropped on a drop zone go to the Archived grid.
+        if (target.dataset.status !== origin.status)
+            card.querySelector(".job-card-age").textContent = "Today";
         setCardStatus(card, target.dataset.status, target.dataset.statusLabel);
-        (target.classList.contains("drop-zone") ? closedList : target).prepend(card);
+        (target.classList.contains("drop-zone") ? archivedList : target).prepend(card);
         refreshCounts();
         card.classList.add("is-saving");
 
@@ -72,6 +75,7 @@
         } catch (error) {
             console.error(error);
             setCardStatus(card, origin.status, origin.label);
+            card.querySelector(".job-card-age").textContent = origin.age;
             origin.list.insertBefore(card, origin.next?.parentNode === origin.list ? origin.next : null);
             refreshCounts();
             toast.show();
@@ -107,11 +111,24 @@
     board.querySelectorAll(".board-list").forEach(list =>
         Sortable.create(list, { ...shared, group: { name: "jobs" }, onAdd }));
 
-    // Closed cards can be dragged out, but not dropped back in directly (use a drop zone).
-    Sortable.create(closedList, { ...shared, group: { name: "jobs", put: false } });
+    // Archived cards can be dragged out, but not dropped back in directly (use a drop zone).
+    Sortable.create(archivedList, { ...shared, group: { name: "jobs", put: false } });
 
     document.querySelectorAll(".drop-zone").forEach(zone =>
         Sortable.create(zone, { ...shared, group: { name: "jobs", pull: false }, onAdd }));
+
+    // Reload the board as soon as a different time range is picked.
+    const rangeForm = document.getElementById("range-form");
+    rangeForm.querySelector("select").addEventListener("change", () => rangeForm.submit());
+
+    // Cards are links, which browsers let you drag as URLs. SortableJS uses its own pointer-based
+    // dragging (forceFallback), so block the browser's native drag on cards entirely.
+    document.addEventListener("dragstart", event => {
+        // Dragging selected text can report the text node itself, so check its parent too.
+        const element = event.target instanceof Element ? event.target : event.target.parentElement;
+        if (element?.closest(".job-card"))
+            event.preventDefault();
+    });
 
     // A drop ends with a click on the card's link; don't navigate in that case.
     document.addEventListener("click", event => {
