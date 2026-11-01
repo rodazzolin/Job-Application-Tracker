@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using JobTracker.Models;
 namespace JobTracker.ViewModels;
 
-public class JobApplicationFormViewModel
+public class JobApplicationFormViewModel : IValidatableObject
 {
     [Required]
     [MaxLength(FieldLengths.JobTitle)]
@@ -26,4 +26,17 @@ public class JobApplicationFormViewModel
     [DataType(DataType.Date)]
     [DisplayName("Posted At")]
     public DateOnly? PostedAt {get; set;}
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Status != JobApplicationStatus.Saved
+            && AppliedAt is not null
+            && PostedAt is not null
+            && AppliedAt < PostedAt)
+        {
+            yield return new ValidationResult(
+                "Application date can't be before the posting date.",
+                [nameof(AppliedAt)]);
+        }
+    }
 }

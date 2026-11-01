@@ -14,4 +14,5 @@ public class JobApplication
                                             // Defaults to CreatedAt.
     public int CompanyID {get; set;}
     public Company Company {get; set;} = null!;
+    public List<JobApplicationStatusChange> StatusChanges {get; set;} = [];
 }

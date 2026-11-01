@@ -127,6 +127,7 @@ public class JobApplicationsController : Controller
         // If status changed, instantiate a new StatusChange table.
         JobApplicationStatus oldStatus = jobApp.Status;
         JobApplicationStatus newStatus = form.Status;
+        jobApp.Status = newStatus;
         if(!oldStatus.Equals(newStatus))
         {
             JobApplicationStatusChange statusChange = new() { 
@@ -164,10 +165,22 @@ public class JobApplicationsController : Controller
         if(!hasOtherJobs)
         {
             Company? company = await context.Companies.FindAsync(jobApp.CompanyID);            
-            context.Companies.Remove(jobApp.Company);
+            context.Companies.Remove(company!);
         }
             
         await context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        JobApplication? jobApp = 
+            await context.JobApplications.Include(j => j.Company)
+            .Include(j => j.StatusChanges.OrderBy(s => s.Time))
+            .FirstOrDefaultAsync(j => j.ID == id && j.UserID == UserID);
+        if(jobApp is null)
+            return NotFound();
+        return View(jobApp);
     }
 }
