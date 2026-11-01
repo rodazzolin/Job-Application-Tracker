@@ -1,0 +1,12 @@
+@model JobApplication
+
+<a asp-action="Details" asp-route-id="@Model.ID"
+   class="job-card status-@Model.Status.ToString().ToLowerInvariant()"
+   data-id="@Model.ID" data-status="@Model.Status">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="company-monogram">@char.ToUpperInvariant(Model.Company.Name[0])</span>
+        <span class="job-card-company text-truncate">@Model.Company.Name</span>
+    </div>
+    <div class="job-card-title">@Model.Title</div>
+    <span class="status-badge mt-2">@Model.Status.GetDisplayName()</span>
+</a>

@@ -29,3 +29,231 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* ---------- Status colors ---------- */
+/* Any element with a status-* class exposes --status-color to its children. */
+.status-saved         { --status-color: #8b949e; }
+.status-applied       { --status-color: #4c9aff; }
+.status-interviewing  { --status-color: #f0b429; }
+.status-offerreceived { --status-color: #2fbf71; }
+.status-rejected      { --status-color: #e5534b; }
+.status-withdrawn     { --status-color: #6e7681; }
+
+.status-badge {
+  display: inline-block;
+  padding: .15rem .55rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--status-color);
+  background-color: color-mix(in srgb, var(--status-color) 16%, transparent);
+}
+
+/* ---------- Page headings ---------- */
+.page-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+/* ---------- Kanban board ---------- */
+.job-board {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .job-board { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1200px) {
+  .job-board { grid-template-columns: repeat(4, 1fr); }
+}
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  min-height: 26rem;
+  padding: 1rem .75rem;
+  border-radius: .75rem;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.board-column-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0 .25rem .25rem;
+}
+
+.board-column-title {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--bs-emphasis-color);
+}
+
+.board-column-count {
+  min-width: 1.5rem;
+  padding: .1rem .45rem;
+  border-radius: .4rem;
+  text-align: center;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--status-color);
+  background-color: color-mix(in srgb, var(--status-color) 18%, transparent);
+}
+
+.board-column-empty {
+  margin: 0;
+  padding: 1.5rem .5rem;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: .5rem;
+  text-align: center;
+  font-size: .85rem;
+  color: var(--bs-secondary-color);
+}
+
+/* ---------- Job cards ---------- */
+.job-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.job-card {
+  display: block;
+  padding: .85rem 1rem;
+  border-left: 3px solid var(--status-color);
+  border-radius: .5rem;
+  background-color: var(--bs-body-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+  color: var(--bs-body-color);
+  text-decoration: none;
+  transition: background-color .15s ease, transform .15s ease;
+}
+
+.job-card:hover,
+.job-card:focus-visible {
+  background-color: var(--bs-secondary-bg);
+  color: var(--bs-body-color);
+  transform: translateY(-1px);
+}
+
+.company-monogram {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: .35rem;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--bs-emphasis-color);
+  background-color: var(--bs-secondary-bg);
+}
+
+.job-card-company {
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--bs-link-color);
+}
+
+.job-card-title {
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--bs-emphasis-color);
+}
+
+/* ---------- Drag and drop ---------- */
+.board-list {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: .75rem;
+  min-height: 6rem;
+  margin: -.25rem;
+  padding: .25rem;
+  border-radius: .5rem;
+  transition: background-color .15s ease;
+}
+
+/* Highlight the column the dragged card is hovering over. */
+.board-list:has(.job-card-ghost) {
+  background-color: color-mix(in srgb, var(--status-color) 8%, transparent);
+}
+
+.job-card { cursor: grab; }
+
+/* The card's spot in the list while it's being dragged. */
+.job-card-ghost { opacity: .3; }
+
+/* The copy of the card that follows the pointer. */
+.job-card-floating {
+  /* SortableJS moves this copy with `transform`; the card's hover transition would make it lag behind the pointer. */
+  transition: none !important;
+  cursor: grabbing;
+  box-shadow: 0 .75rem 1.5rem rgba(0, 0, 0, .5);
+}
+
+.job-card.is-saving {
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* Rejected/Withdrawn targets that slide up from the bottom during a drag. */
+.drop-zones {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 1050;
+  display: flex;
+  gap: 1rem;
+  width: min(36rem, calc(100% - 2rem));
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 150%);
+  transition: transform .2s ease, opacity .2s ease;
+}
+
+body.is-dragging-job .drop-zones {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.drop-zone {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 4.5rem;
+  overflow: hidden;
+  border: 2px dashed var(--status-color);
+  border-radius: .75rem;
+  font-weight: 600;
+  color: var(--status-color);
+  background-color: color-mix(in srgb, var(--status-color) 12%, var(--bs-body-bg));
+  transition: background-color .15s ease, transform .15s ease;
+}
+
+.drop-zone:has(.job-card) {
+  background-color: color-mix(in srgb, var(--status-color) 30%, var(--bs-body-bg));
+  transform: scale(1.03);
+}
+
+/* Hide the card's placeholder inside a drop zone; the zone highlight is the feedback. */
+.drop-zone .job-card {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}

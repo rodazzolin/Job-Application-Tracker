@@ -1,59 +1,69 @@
-﻿@{
-    ViewData["Title"] = "Job Applications";
+﻿@model JobBoardViewModel
+@{
+    ViewData["Title"] = "Application Tracker";
+    JobApplicationStatus[] closedStatuses = [JobApplicationStatus.Rejected, JobApplicationStatus.Withdrawn];
 }
-@model List<JobApplication>
 
-<div class="text-center">
-    <h1 class="display-4">Jobs</h1>
-    <ul class="list-group">
-        @foreach(JobApplication jobApp in Model)
-        {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                @jobApp.Title at @jobApp.Company.Name 
-                <div>
-                    <a asp-action="Details" asp-route-id="@jobApp.ID" class="btn btn-sm btn-outline-primary ms-2">View</a>
-                    <a asp-action="Edit" asp-route-id="@jobApp.ID" class="btn btn-sm btn-outline-primary ms-2">Edit</a>
-                    <button type="button" class="btn btn-sm btn-outline-danger"
-                            data-bs-toggle="modal" data-bs-target="#delete-modal"
-                            data-delete-url="@Url.Action("Delete", new { id = jobApp.ID })"
-                            data-job-label="@jobApp.Title at @jobApp.Company.Name">
-                        Delete
-                    </button>
-                </div>
-            </li>
-        }
-    </ul>
-    
-    <a asp-action="Create" class="btn btn-primary mt-3">Add job</a>
+@* Token the board script sends with each status update (anti-forgery). *@
+@Html.AntiForgeryToken()
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <h1 class="page-title mb-0">Application Tracker</h1>
+    <a asp-action="Create" class="btn btn-primary">+ Add job</a>
 </div>
 
-@* Delete dialog modal. *@
-<div class="modal fade" id="delete-modal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Delete job</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="job-board" class="job-board" data-update-url="@Url.Action("UpdateStatus")">
+    @foreach (JobBoardColumn column in Model.Columns)
+    {
+        <section class="board-column status-@column.Status.ToString().ToLowerInvariant()">
+            <header class="board-column-header">
+                <h2 class="board-column-title">@column.Title</h2>
+                <span class="board-column-count">@column.Jobs.Count</span>
+            </header>
+
+            <div class="board-list" data-status="@column.Status" data-status-label="@column.Status.GetDisplayName()">
+                @foreach (JobApplication jobApp in column.Jobs)
+                {
+                    <partial name="_JobCard" model="jobApp" />
+                }
+                <p class="board-column-empty @(column.Jobs.Count > 0 ? "d-none" : "")">No jobs here yet.</p>
             </div>
-            <div class="modal-body">
-                Delete <strong id="delete-job-label"></strong>? This can't be undone.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="delete-form" method="post" asp-action="Delete">
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
+        </section>
+    }
+</div>
+
+<section id="closed-section" class="@(Model.Closed.Count == 0 ? "d-none" : "")">
+    <h2 class="section-title mt-5 mb-3">Closed</h2>
+    <div id="closed-list" class="job-grid">
+        @foreach (JobApplication jobApp in Model.Closed)
+        {
+            <partial name="_JobCard" model="jobApp" />
+        }
+    </div>
+</section>
+
+@* Drop targets for closing a job. Shown only while a card is being dragged. *@
+<div id="drop-zones" class="drop-zones" aria-hidden="true">
+    @foreach (JobApplicationStatus status in closedStatuses)
+    {
+        <div class="drop-zone status-@status.ToString().ToLowerInvariant()"
+             data-status="@status" data-status-label="@status.GetDisplayName()">
+            <span class="drop-zone-label">Move to @status.GetDisplayName()</span>
+        </div>
+    }
+</div>
+
+@* Error toast for failed updates. *@
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="board-toast" class="toast text-bg-danger border-0" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body">Couldn't update the job's status. Please try again.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        document.getElementById("delete-modal").addEventListener("show.bs.modal", event => {
-            const button = event.relatedTarget;   // The delete button that was clicked.
-            document.getElementById("delete-form").action = button.dataset.deleteUrl;
-            document.getElementById("delete-job-label").textContent = button.dataset.jobLabel;
-        });
-    </script>
+    <script src="~/lib/sortablejs/Sortable.min.js"></script>
+    <script src="~/js/job-board.js" asp-append-version="true"></script>
 }

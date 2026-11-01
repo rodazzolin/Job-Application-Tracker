@@ -22,12 +22,38 @@ public class JobApplicationsController : Controller
         jobService = svr;
     }
 
-    // Returns a list of all job applications.
+    // Shows the user's jobs as a Kanban board, most recently updated first in each column.
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        List<JobApplication> jobApplications = await context.JobApplications.Where(x => x.UserID == UserID).Include(x => x.Company).ToListAsync();
-        return View(jobApplications);
+        // Fetches job applications for the user, sorted by newest.
+        List<JobApplication> jobApplications = await context.JobApplications
+            .Where(x => x.UserID == UserID)
+            .Include(x => x.Company)
+            .OrderByDescending(x => x.UpdatedAt)
+            .ToListAsync();
+
+        // In-line helper to filter jobs by status.
+        List<JobApplication> InStatus(params JobApplicationStatus[] statuses) =>
+            jobApplications.Where(j => statuses.Contains(j.Status)).ToList();
+
+        // In-line helper to create a column for the board.
+        JobBoardColumn Column(string title, JobApplicationStatus status) =>
+            new() { Title = title, Status = status, Jobs = InStatus(status) };
+
+        // Instantiates the view model for the board and populates it with columns and jobs.
+        JobBoardViewModel board = new()
+        {
+            Columns =
+            [
+                Column("Saved", JobApplicationStatus.Saved),
+                Column("Applied", JobApplicationStatus.Applied),
+                Column("Interviewing", JobApplicationStatus.Interviewing),
+                Column("Offers", JobApplicationStatus.OfferReceived),
+            ],
+            Closed = InStatus(JobApplicationStatus.Rejected, JobApplicationStatus.Withdrawn),
+        };
+        return View(board);
     }
 
     // Creates a job application form for later submission.
@@ -50,7 +76,7 @@ public class JobApplicationsController : Controller
         
         // Fetch or create the specified company.
         string companyName = form.CompanyName.Trim();
-        Company? company = await jobService.FetchOrCreateCompanyAsync(UserID, form.CompanyName);
+        Company? company = await jobService.FetchOrCreateCompanyAsync(UserID, companyName);
 
         // Create the job app.
         DateTime now = DateTime.UtcNow;
@@ -114,7 +140,7 @@ public class JobApplicationsController : Controller
 
         // Fetch or create the specified company.
         string companyName = form.CompanyName.Trim();
-        Company? company = await jobService.FetchOrCreateCompanyAsync(UserID, form.CompanyName);
+        Company? company = await jobService.FetchOrCreateCompanyAsync(UserID, companyName);
 
         // Overwrite fields from form.
         jobApp.Title = form.Title;
@@ -122,22 +148,10 @@ public class JobApplicationsController : Controller
         jobApp.Location = form.Location;
         jobApp.PostingURL = form.PostingURL;
         jobApp.PostedAt = form.PostedAt;
-        jobApp.AppliedAt = form.Status.Equals(JobApplicationStatus.Saved) ? null : form.AppliedAt;
 
-        // If status changed, instantiate a new StatusChange table.
-        JobApplicationStatus oldStatus = jobApp.Status;
-        JobApplicationStatus newStatus = form.Status;
-        jobApp.Status = newStatus;
-        if(!oldStatus.Equals(newStatus))
-        {
-            JobApplicationStatusChange statusChange = new() { 
-                JobApplication = jobApp,
-                OldStatus = oldStatus,
-                NewStatus = newStatus,
-                Time = DateTime.UtcNow
-            };
-            context.StatusChanges.Add(statusChange);
-        }
+        // Change status (logs a StatusChange row if it differs), then let the form's AppliedAt win.
+        jobService.ChangeStatus(jobApp, form.Status);
+        jobApp.AppliedAt = form.Status.Equals(JobApplicationStatus.Saved) ? null : form.AppliedAt;
 
         // Increment timestamp.
         jobApp.UpdatedAt = DateTime.UtcNow;
@@ -147,6 +161,24 @@ public class JobApplicationsController : Controller
 
         // Return to the list page.
         return RedirectToAction(nameof(Index));
+    }
+
+    // Changes a job's status from the board's drag-and-drop. Called by JavaScript, so it returns
+    // status codes (204 / 400 / 404) instead of a view or redirect.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateStatus(JobStatusUpdateViewModel input)
+    {
+        if(!ModelState.IsValid || !Enum.IsDefined(input.Status))
+            return BadRequest();
+
+        JobApplication? jobApp = await context.JobApplications.FirstOrDefaultAsync(j => j.ID == input.ID && j.UserID == UserID);
+        if(jobApp is null)
+            return NotFound();
+
+        jobService.ChangeStatus(jobApp, input.Status);
+        await context.SaveChangesAsync();
+        return NoContent();
     }
 
     // Deletes the specified job app.

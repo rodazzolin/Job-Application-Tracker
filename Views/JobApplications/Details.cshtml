@@ -4,11 +4,13 @@
 }
 
 <h1>@Model.Title</h1>
-<h4 class="text-muted">@Model.Company.Name</h4>
+<h4 class="text-body-secondary">@Model.Company.Name</h4>
 
 <dl class="row mt-4">
     <dt class="col-sm-3">Status</dt>
-    <dd class="col-sm-9">@Model.Status</dd>
+    <dd class="col-sm-9">
+        <span class="status-badge status-@Model.Status.ToString().ToLowerInvariant()">@Model.Status.GetDisplayName()</span>
+    </dd>
 
     <dt class="col-sm-3">Location</dt>
     <dd class="col-sm-9">@(Model.Location ?? "—")</dd>
@@ -24,8 +26,6 @@
             <text>—</text>
         }
     </dd>
-
-    @* Applied, Posted, Created, Updated: same pattern *@
 </dl>
 
 <h3 class="mt-4">History</h3>
@@ -34,10 +34,34 @@
     {
         <li class="list-group-item">
             @change.Time.ToLocalTime().ToString("MMM d, yyyy h:mm tt"):
-            @change.OldStatus → @change.NewStatus
+            @change.OldStatus.GetDisplayName() → @change.NewStatus.GetDisplayName()
         </li>
     }
 </ul>
 
-<a asp-action="Edit" asp-route-id="@Model.ID" class="btn btn-outline-primary mt-3">Edit</a>
-<a asp-action="Index" class="btn btn-secondary mt-3">Back</a>
+<div class="d-flex gap-2 mt-3">
+    <a asp-action="Edit" asp-route-id="@Model.ID" class="btn btn-outline-primary">Edit</a>
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete-modal">Delete</button>
+    <a asp-action="Index" class="btn btn-secondary">Back</a>
+</div>
+
+@* Delete confirmation dialog. *@
+<div class="modal fade" id="delete-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Delete <strong>@Model.Title at @Model.Company.Name</strong>? This can't be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" asp-action="Delete" asp-route-id="@Model.ID">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
