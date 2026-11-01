@@ -3,22 +3,30 @@ using JobTracker.Data;
 using Microsoft.EntityFrameworkCore;
 using JobTracker.ViewModels;
 using JobTracker.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using JobTracker.Services;
 
 namespace JobTracker.Controllers;
 
+[Authorize]
 public class JobApplicationsController : Controller
 {
     private readonly AppDbContext context;
-    public JobApplicationsController(AppDbContext ctx) : base()
+    private readonly JobApplicationService jobService;
+    private string UserID => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    public JobApplicationsController(AppDbContext ctx, JobApplicationService svr) : base()
     {
         context = ctx;   
+        jobService = svr;
     }
 
     // Returns a list of all job applications.
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var jobApplications = await context.JobApplications.Include(x => x.Company).ToListAsync();
+        List<JobApplication> jobApplications = await context.JobApplications.Where(x => x.UserID == UserID).Include(x => x.Company).ToListAsync();
         return View(jobApplications);
     }
 
@@ -42,23 +50,22 @@ public class JobApplicationsController : Controller
         
         // Fetch or create the specified company.
         string companyName = form.CompanyName.Trim();
-        Company? company = await context.Companies.FirstOrDefaultAsync(x => x.Name == companyName);
-        if(company is null)
-            company = new() {Name = companyName};
+        Company? company = await jobService.FetchOrCreateCompanyAsync(UserID, form.CompanyName);
 
         // Create the job app.
         DateTime now = DateTime.UtcNow;
         JobApplication jobApp = new()
         {
-          Company = company,
-          Title = form.Title,
-          Location = form.Location,
-          Status = form.Status,
-          PostingURL = form.PostingURL,
-          AppliedAt = form.Status.Equals(JobApplicationStatus.Saved) ? null : form.AppliedAt,
-          PostedAt = form.PostedAt,
-          CreatedAt = now,
-          UpdatedAt = now
+            UserID = UserID,
+            Company = company,
+            Title = form.Title,
+            Location = form.Location,
+            Status = form.Status,
+            PostingURL = form.PostingURL,
+            AppliedAt = form.Status.Equals(JobApplicationStatus.Saved) ? null : form.AppliedAt,
+            PostedAt = form.PostedAt,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         // Save changes.
@@ -73,7 +80,7 @@ public class JobApplicationsController : Controller
     [HttpGet]
     public async Task<IActionResult> Edit(int id)
     {
-        JobApplication? jobApp = await context.JobApplications.Include(j => j.Company).FirstOrDefaultAsync(j => j.ID == id);
+        JobApplication? jobApp = await context.JobApplications.Where(x => x.UserID == UserID).Include(j => j.Company).FirstOrDefaultAsync(j => j.ID == id);
         if(jobApp is null)
             return NotFound();
         
@@ -91,6 +98,7 @@ public class JobApplicationsController : Controller
         return View(form);
     }
 
+    // Fetches the specified job and overwrites its fields from the form.
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, JobApplicationFormViewModel form)
@@ -100,15 +108,13 @@ public class JobApplicationsController : Controller
             return View(form);
 
         // Fetch the job app and its company.
-        JobApplication? jobApp = await context.JobApplications.Include(j => j.Company).FirstOrDefaultAsync(j => j.ID == id);
+        JobApplication? jobApp = await context.JobApplications.Where(x => x.UserID == UserID).Include(j => j.Company).FirstOrDefaultAsync(j => j.ID == id);
         if(jobApp is null)
             return NotFound();
 
         // Fetch or create the specified company.
         string companyName = form.CompanyName.Trim();
-        Company? company = await context.Companies.FirstOrDefaultAsync(x => x.Name == companyName);
-        if(company is null)
-            company = new() {Name = companyName};
+        Company? company = await jobService.FetchOrCreateCompanyAsync(UserID, form.CompanyName);
 
         // Overwrite fields from form.
         jobApp.Title = form.Title;
@@ -126,6 +132,20 @@ public class JobApplicationsController : Controller
         await context.SaveChangesAsync();
 
         // Return to the list page.
+        return RedirectToAction(nameof(Index));
+    }
+
+    // Deletes the specified job app.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        JobApplication? jobApp = await context.JobApplications.Where(x => x.UserID == UserID).FirstOrDefaultAsync(j => j.ID == id);
+        if(jobApp is null)
+            return NotFound();
+        
+        context.JobApplications.Remove(jobApp);
+        await context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 }

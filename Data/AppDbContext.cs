@@ -1,8 +1,9 @@
 using JobTracker.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace JobTracker.Data;
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext
 {
     // Constructor.
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
@@ -13,10 +14,11 @@ public class AppDbContext : DbContext
 
     // Settings.
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<Company>(entity =>
         {
             entity.Property(c => c.Name).HasMaxLength(FieldLengths.CompanyTitle);
-            entity.HasIndex(c => c.Name).IsUnique();
+            entity.HasIndex(c => new { c.UserID, c.Name }).IsUnique();
         });
 
         modelBuilder.Entity<JobApplication>(entity =>

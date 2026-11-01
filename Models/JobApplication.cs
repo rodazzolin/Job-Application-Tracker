@@ -2,6 +2,7 @@ namespace JobTracker.Models;
 public class JobApplication
 {
     public long ID {get; set;}
+    public string UserID {get; set;} = "";
     public required string Title {get; set;}
     public string? PostingURL {get; set;}
     public string? Location {get; set;}

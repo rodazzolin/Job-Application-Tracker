@@ -10,10 +10,49 @@
         {
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 @jobApp.Title at @jobApp.Company.Name 
-                <a asp-action="Edit" asp-route-id="@jobApp.ID" class="btn btn-sm btn-outline-primary ms-2">Edit</a>
+                <div>
+                    <a asp-action="Edit" asp-route-id="@jobApp.ID" class="btn btn-sm btn-outline-primary ms-2">Edit</a>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#delete-modal"
+                            data-delete-url="@Url.Action("Delete", new { id = jobApp.ID })"
+                            data-job-label="@jobApp.Title at @jobApp.Company.Name">
+                        Delete
+                    </button>
+                </div>
             </li>
         }
     </ul>
     
     <a asp-action="Create" class="btn btn-primary mt-3">Add job</a>
 </div>
+
+@* Delete dialog modal. *@
+<div class="modal fade" id="delete-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Delete <strong id="delete-job-label"></strong>? This can't be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="delete-form" method="post" asp-action="Delete">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById("delete-modal").addEventListener("show.bs.modal", event => {
+            const button = event.relatedTarget;   // The delete button that was clicked.
+            document.getElementById("delete-form").action = button.dataset.deleteUrl;
+            document.getElementById("delete-job-label").textContent = button.dataset.jobLabel;
+        });
+    </script>
+}
