@@ -6,6 +6,7 @@ using JobTracker.Models;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using JobTracker.Services;
+using JobTracker.Services.JobPostings;
 
 namespace JobTracker.Controllers;
 
@@ -14,12 +15,14 @@ public class JobApplicationsController : Controller
 {
     private readonly AppDbContext context;
     private readonly JobApplicationService jobService;
+    private readonly IEnumerable<IJobPostingReader> readers;
     private string UserID => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    public JobApplicationsController(AppDbContext ctx, JobApplicationService svr) : base()
+    public JobApplicationsController(AppDbContext ctx, JobApplicationService svr, IEnumerable<IJobPostingReader> rd) : base()
     {
         context = ctx;   
         jobService = svr;
+        readers = rd;
     }
 
     // Shows the user's jobs as a Kanban board, most recently updated first in each column.
@@ -205,24 +208,27 @@ public class JobApplicationsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        JobApplication? jobApp = await context.JobApplications.FirstOrDefaultAsync(j => j.ID == id && j.UserID == UserID);
-        if(jobApp is null)
+        if(!await jobService.DeleteAsync(UserID, id))
             return NotFound();
-        
-        context.JobApplications.Remove(jobApp);
 
-        // Deletes company if it just became orphaned.
-        bool hasOtherJobs = await context.JobApplications.AnyAsync(j => j.CompanyID == jobApp.CompanyID && j.ID != jobApp.ID);
-        if(!hasOtherJobs)
-        {
-            Company? company = await context.Companies.FindAsync(jobApp.CompanyID);            
-            context.Companies.Remove(company!);
-        }
-            
         await context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 
+    // Deletes a job from the board's card menu. Called by job-board.js with fetch, so it returns
+    // status codes (204 / 404) instead of redirecting, like UpdateStatus.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteFromBoard(int id)
+    {
+        if(!await jobService.DeleteAsync(UserID, id))
+            return NotFound();
+
+        await context.SaveChangesAsync();
+        return NoContent();
+    }
+
+    // Fetches a job application and its status changes for viewing.
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
@@ -233,5 +239,24 @@ public class JobApplicationsController : Controller
         if(jobApp is null)
             return NotFound();
         return View(jobApp);
+    }
+
+    // Given a job posting URL, attempts to fetch the job's title, company, and location from the posting
+    // via a number of individual readers.
+    [HttpGet]
+    public async Task<IActionResult> Lookup(string url)
+    {
+        // Attemps to parse the URL.
+        if(!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri))
+            return BadRequest("Invalid URL");
+        
+        // Attempts to read the job posting from each reader in order.
+        foreach(IJobPostingReader reader in readers)
+        {
+            JobPostingInfo? info = await reader.TryReadPostingAsync(uri);
+            if(info != null)
+                return Json(info);
+        }
+        return NotFound();
     }
 }

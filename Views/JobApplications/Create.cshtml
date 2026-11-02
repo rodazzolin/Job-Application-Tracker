@@ -5,6 +5,21 @@
 
 <h1>Add a job application</h1>
 
+@* Autofill: its own form, outside the job form, so the pasted URL is never posted with the job
+   and pressing Enter here autofills instead of saving. Handled by job-autofill.js. *@
+<form id="autofill-form" class="autofill-box mb-4" data-lookup-url="@Url.Action("Lookup")" novalidate>
+    <label for="autofill-url" class="form-label fw-semibold mb-1">Autofill from a job posting</label>
+    <p class="form-text mt-0 mb-2">Paste the posting's link to fill in the details below. You can review everything before saving.</p>
+    <div class="input-group">
+        <input id="autofill-url" type="url" class="form-control" placeholder="https://..." autocomplete="off" required />
+        <button id="autofill-button" type="submit" class="btn btn-outline-primary">
+            <span class="spinner-border spinner-border-sm d-none me-1" aria-hidden="true"></span>
+            Autofill
+        </button>
+    </div>
+    <div id="autofill-status" class="form-text mt-2" role="status" aria-live="polite"></div>
+</form>
+
 <form asp-action="Create" method="post">
     <partial name="_JobApplicationForm" />
     <button type="submit" class="btn btn-primary">Save</button>
@@ -15,4 +30,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/job-form.js"></script>
+    <script src="~/js/job-autofill.js" asp-append-version="true"></script>
 }

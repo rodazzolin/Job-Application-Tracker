@@ -1,15 +1,54 @@
 @model JobCardViewModel
+@{
+    // Menu order matches the board (enum order differs); Archived goes last, after a divider.
+    JobApplicationStatus[] menuStatuses =
+    [
+        JobApplicationStatus.Saved,
+        JobApplicationStatus.Applied,
+        JobApplicationStatus.Interviewing,
+        JobApplicationStatus.OfferReceived,
+        JobApplicationStatus.Archived,
+    ];
+}
 
-<a asp-action="Details" asp-route-id="@Model.ID"
-   class="job-card status-@Model.Status.ToString().ToLowerInvariant()"
-   data-id="@Model.ID" data-status="@Model.Status" draggable="false">
+@* The card is a div, not a link, so it can hold the menu button. The title's stretched-link
+   covers the whole card, so clicking anywhere else still opens Details. *@
+<div class="job-card status-@Model.Status.ToString().ToLowerInvariant()"
+     data-id="@Model.ID" data-status="@Model.Status">
     <div class="d-flex align-items-center gap-2 mb-2">
         <span class="company-monogram">@char.ToUpperInvariant(Model.CompanyName[0])</span>
         <span class="job-card-company text-truncate">@Model.CompanyName</span>
+
+        <div class="dropdown job-card-menu ms-auto">
+            <button type="button" class="job-card-menu-button" data-bs-toggle="dropdown"
+                    aria-expanded="false" aria-label="Job actions" title="Job actions">&#x22EF;</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">Move to</h6></li>
+                @foreach (JobApplicationStatus status in menuStatuses)
+                {
+                    bool isCurrent = status == Model.Status;
+                    if (status == JobApplicationStatus.Archived)
+                    {
+                        <li><hr class="dropdown-divider"></li>
+                    }
+                    <li>
+                        <button type="button" class="dropdown-item @(isCurrent ? "active" : "")"
+                                data-status="@status" data-status-label="@status.GetDisplayName()"
+                                disabled="@isCurrent" aria-current="@(isCurrent ? "true" : null)">
+                            @(status == JobApplicationStatus.Archived ? "Archive" : status.GetDisplayName())
+                        </button>
+                    </li>
+                }
+                <li><hr class="dropdown-divider"></li>
+                <li><button type="button" class="dropdown-item text-danger" data-action="delete">Delete…</button></li>
+            </ul>
+        </div>
     </div>
-    <div class="job-card-title">@Model.Title</div>
+
+    <a asp-action="Details" asp-route-id="@Model.ID" class="job-card-title stretched-link" draggable="false">@Model.Title</a>
+
     <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
         <span class="status-badge">@Model.Status.GetDisplayName()</span>
         <span class="job-card-age" title="@Html.DisplayNameFor(m => m.StatusAgeLabel)">@Model.StatusAgeLabel</span>
     </div>
-</a>
+</div>
