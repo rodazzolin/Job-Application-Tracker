@@ -51,8 +51,19 @@ public class JobApplicationsController : Controller
                 CompanyName = x.Company.Name,
                 Status = x.Status,
                 StatusSince = x.StatusChanges.Max(s => (DateTime?)s.Time) ?? x.CreatedAt,
+                Location = x.Location,
+                AppliedAt = x.AppliedAt,
+                // Becomes an EXISTS subquery in SQL, so there's still a single query.
+                HasResponse = x.Status == JobApplicationStatus.Interviewing
+                    || x.Status == JobApplicationStatus.OfferReceived
+                    || x.StatusChanges.Any(s => s.NewStatus == JobApplicationStatus.Interviewing
+                                             || s.NewStatus == JobApplicationStatus.OfferReceived),
             })
             .ToListAsync();
+
+        // Only worth a second query when the range shows nothing: are there jobs outside it?
+        bool hasAnyJobs = jobApplications.Count > 0
+            || await context.JobApplications.AnyAsync(x => x.UserID == UserID);
 
         // In-line helper to filter jobs by status.
         List<JobCardViewModel> InStatus(params JobApplicationStatus[] statuses) =>
@@ -74,16 +85,24 @@ public class JobApplicationsController : Controller
                 Column("Offers", JobApplicationStatus.OfferReceived),
             ],
             Archived = InStatus(JobApplicationStatus.Archived),
+            Summary = JobBoardSummary.FromCards(jobApplications, DateOnly.FromDateTime(DateTime.Today)),
+            HasAnyJobs = hasAnyJobs,
         };
         return View(board);
     }
 
     // Creates a job application form for later submission.
+    // `status` (optional, e.g. ?status=Applied) preselects a status; the board's "+" buttons use it.
     [HttpGet]
-    public IActionResult Create()
+    public IActionResult Create(JobApplicationStatus? status)
     {
         DateOnly today = DateOnly.FromDateTime(DateTime.Today);
         JobApplicationFormViewModel form = new() {AppliedAt = today, PostedAt = today};
+        if(status is not null && Enum.IsDefined(status.Value))
+            form.Status = status.Value;
+
+        // An unknown ?status= shouldn't show as a validation error on a fresh form.
+        ModelState.Clear();
         return View(form);
     }
 
@@ -234,11 +253,11 @@ public class JobApplicationsController : Controller
     {
         JobApplication? jobApp = 
             await context.JobApplications.Include(j => j.Company)
-            .Include(j => j.StatusChanges.OrderBy(s => s.Time))
+            .Include(j => j.StatusChanges)
             .FirstOrDefaultAsync(j => j.ID == id && j.UserID == UserID);
         if(jobApp is null)
             return NotFound();
-        return View(jobApp);
+        return View(JobDetailsViewModel.FromJob(jobApp));
     }
 
     // Given a job posting URL, attempts to fetch the job's title, company, and location from the posting

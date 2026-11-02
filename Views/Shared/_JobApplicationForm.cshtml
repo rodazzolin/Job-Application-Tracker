@@ -1,47 +1,76 @@
 @model JobApplicationFormViewModel
+@{
+    // Status pills in board order (enum order differs).
+    JobApplicationStatus[] statuses =
+    [
+        JobApplicationStatus.Saved,
+        JobApplicationStatus.Applied,
+        JobApplicationStatus.Interviewing,
+        JobApplicationStatus.OfferReceived,
+        JobApplicationStatus.Archived,
+    ];
+}
 
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-<div class="mb-3">
-    <label asp-for="Title" class="form-label"></label>
-    <input asp-for="Title" class="form-control" />
-    <span asp-validation-for="Title" class="text-danger"></span>
-</div>
+<fieldset class="form-section">
+    <legend class="form-section-title">The role</legend>
+    <div class="row g-3">
+        <div class="col-12">
+            <label asp-for="Title" class="form-label"></label>
+            <input asp-for="Title" class="form-control" placeholder="e.g. Software Engineer" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+        <div class="col-sm-6">
+            <label asp-for="CompanyName" class="form-label"></label>
+            <input asp-for="CompanyName" class="form-control" />
+            <span asp-validation-for="CompanyName" class="text-danger"></span>
+        </div>
+        <div class="col-sm-6">
+            <label asp-for="Location" class="form-label"></label>
+            <input asp-for="Location" class="form-control" placeholder="e.g. Remote, or a city" />
+            <span asp-validation-for="Location" class="text-danger"></span>
+        </div>
+    </div>
+</fieldset>
 
-<div class="mb-3">
-    <label asp-for="CompanyName" class="form-label"></label>
-    <input asp-for="CompanyName" class="form-control" />
-    <span asp-validation-for="CompanyName" class="text-danger"></span>
-</div>
+<fieldset class="form-section">
+    <legend class="form-section-title">The posting</legend>
+    <div class="row g-3">
+        <div class="col-sm-8">
+            <label asp-for="PostingURL" class="form-label"></label>
+            <input asp-for="PostingURL" class="form-control" placeholder="https://..." />
+            <span asp-validation-for="PostingURL" class="text-danger"></span>
+        </div>
+        <div class="col-sm-4">
+            <label asp-for="PostedAt" class="form-label"></label>
+            <input asp-for="PostedAt" class="form-control" />
+            <span asp-validation-for="PostedAt" class="text-danger"></span>
+        </div>
+    </div>
+</fieldset>
 
-<div class="mb-3">
-    <label asp-for="Location" class="form-label"></label>
-    <input asp-for="Location" class="form-control" />
-    <span asp-validation-for="Location" class="text-danger"></span>
-</div>
-
-<div class="mb-3">
-    <label asp-for="PostingURL" class="form-label"></label>
-    <input asp-for="PostingURL" class="form-control" />
-    <span asp-validation-for="PostingURL" class="text-danger"></span>
-</div>
-
-<div class="mb-3">
-    <label asp-for="Status" class="form-label"></label>
-    <select asp-for="Status" asp-items="Html.GetEnumSelectList<JobApplicationStatus>()" class="form-select"></select>
-    <span asp-validation-for="Status" class="text-danger"></span>
-</div>
-
-<div class="mb-3 collapse" id="applied-at-group">
-    <label asp-for="AppliedAt" class="form-label"></label>
-    <input asp-for="AppliedAt" class="form-control" />
-    <span asp-validation-for="AppliedAt" class="text-danger"></span>
-</div>
-
-<div class="mb-3">
-    <label asp-for="PostedAt" class="form-label"></label>
-    <input asp-for="PostedAt" class="form-control" />
-    <span asp-validation-for="PostedAt" class="text-danger"></span>
-</div>
-
-
+<fieldset class="form-section">
+    <legend class="form-section-title">Your application</legend>
+    <div class="row g-3">
+        <div class="col-12">
+            @* Radio buttons styled as pills (Bootstrap's btn-check). They post the status by name,
+               e.g. "Applied", which binds to the enum like the old dropdown's number did. *@
+            <div class="form-label" id="status-label">@Html.DisplayNameFor(m => m.Status)</div>
+            <div class="status-picker" role="radiogroup" aria-labelledby="status-label">
+                @foreach (JobApplicationStatus status in statuses)
+                {
+                    <input type="radio" class="btn-check" asp-for="Status" value="@status" id="Status-@status" autocomplete="off" />
+                    <label class="status-pill status-@status.ToString().ToLowerInvariant()" for="Status-@status">@status.GetDisplayName()</label>
+                }
+            </div>
+            <span asp-validation-for="Status" class="text-danger"></span>
+        </div>
+        @* Hidden for Saved (job-form.js): a saved job hasn't been applied to yet. *@
+        <div class="col-sm-6 collapse" id="applied-at-group">
+            <label asp-for="AppliedAt" class="form-label"></label>
+            <input asp-for="AppliedAt" class="form-control" />
+            <span asp-validation-for="AppliedAt" class="text-danger"></span>
+        </div>
+    </div>
+</fieldset>

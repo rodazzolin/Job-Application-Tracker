@@ -79,7 +79,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: .75rem;
-  min-height: 26rem;
+  min-height: 22rem;
+  /* Cap at the window height; the card list inside scrolls instead of the page growing. */
+  max-height: max(22rem, calc(100vh - 16rem));
   padding: 1rem .75rem;
   border-radius: .75rem;
   background-color: var(--bs-tertiary-bg);
@@ -137,14 +139,16 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
   color: var(--bs-body-color);
   text-decoration: none;
-  transition: background-color .15s ease, transform .15s ease;
+  transition: background-color .15s ease, box-shadow .15s ease;
 }
 
+/* Hover "lifts" the card with a deeper shadow, not a transform: a transformed card would become the
+   reference point for its menu's fixed positioning, making the open menu jump around (see below). */
 .job-card:hover,
 .job-card:has(.stretched-link:focus-visible) {
   background-color: var(--bs-secondary-bg);
   color: var(--bs-body-color);
-  transform: translateY(-1px);
+  box-shadow: 0 .35rem .9rem rgba(0, 0, 0, .45);
 }
 
 /* The title link takes keyboard focus, so draw the focus ring around the whole card. */
@@ -155,7 +159,9 @@ body {
 
 .job-card .stretched-link:focus-visible { outline: none; }
 
-/* Keep an open menu above the cards after this one. */
+/* Keep an open menu above the cards after this one. The menu uses fixed positioning (so the column's
+   scroll area can't clip it); that only works if no ancestor has a transform, so cards never use one
+   while a menu can be open. */
 .job-card:has(.dropdown-menu.show) { z-index: 10; }
 
 /* ---------- Card status menu ---------- */
@@ -276,53 +282,45 @@ body {
   pointer-events: none;
 }
 
-/* Archive target that slides up from the bottom during a drag. */
-.drop-zones {
-  position: fixed;
-  left: 50%;
-  bottom: 1.5rem;
-  z-index: 1050;
-  display: flex;
-  gap: 1rem;
-  width: min(22rem, calc(100% - 2rem));
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 150%);
-  transition: transform .2s ease, opacity .2s ease;
-}
-
-body.is-dragging-job .drop-zones {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, 0);
-}
-
-.drop-zone {
+/* Archived section as a drop target, while a board card is being dragged
+   (not while dragging an archived card out of it). */
+#archived-list {
   position: relative;
+}
+
+/* Show the section even when it's empty, so there's somewhere to drop. Beats .d-none's !important by specificity. */
+body.is-dragging-job:not(.is-dragging-archived) #archived-section.d-none {
+  display: block !important;
+}
+
+body.is-dragging-job:not(.is-dragging-archived) #archived-list {
+  min-height: 10rem;
+}
+
+/* The dashed overlay covering the whole archived area. */
+body.is-dragging-job:not(.is-dragging-archived) #archived-list::after {
+  content: "Drop here to archive";
+  position: absolute;
+  inset: 0;
+  z-index: 3;   /* Above the cards' stretched links (1) and menus (2). */
   display: flex;
-  flex: 1;
   align-items: center;
   justify-content: center;
-  height: 4.5rem;
-  overflow: hidden;
   border: 2px dashed var(--status-color);
   border-radius: .75rem;
-  font-weight: 600;
-  color: var(--status-color);
-  background-color: color-mix(in srgb, var(--status-color) 12%, var(--bs-body-bg));
-  transition: background-color .15s ease, transform .15s ease;
-}
-
-.drop-zone:has(.job-card) {
-  background-color: color-mix(in srgb, var(--status-color) 30%, var(--bs-body-bg));
-  transform: scale(1.03);
-}
-
-/* Hide the card's placeholder inside a drop zone; the zone highlight is the feedback. */
-.drop-zone .job-card {
-  position: absolute;
-  opacity: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--bs-emphasis-color);
+  /* Mostly page background so the label reads over cards, tinted with the Archived color. */
+  background-color: color-mix(in srgb, var(--bs-body-bg) 80%, transparent);
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--status-color) 10%, transparent);
   pointer-events: none;
+  transition: box-shadow .15s ease;
+}
+
+/* Stronger tint while the card is over the archived area. */
+body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-ghost)::after {
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--status-color) 28%, transparent);
 }
 
 .job-card-age {
@@ -371,4 +369,355 @@ body.is-dragging-job .drop-zones {
   font-weight: 800;
   line-height: 1;
   color: var(--bs-secondary-color);
+}
+
+/* ---------- Details page ---------- */
+.details-page {
+  max-width: 60rem;
+  margin-inline: auto;   /* Center the narrower column inside the page container. */
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: .9rem;
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  color: var(--bs-emphasis-color);
+}
+
+/* A large job card: status-colored edge, monogram, company above the title. */
+.details-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-left: 4px solid var(--status-color);
+  border-radius: .75rem;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.company-monogram-lg {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: .6rem;
+  font-size: 1.5rem;
+}
+
+.details-heading {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.details-company {
+  font-weight: 500;
+  color: var(--bs-link-color);
+}
+
+.details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.posting-button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.posting-host {
+  max-width: 14rem;
+  overflow: hidden;
+  font-size: .75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--bs-secondary-color);
+}
+
+.details-menu-button {
+  padding-inline: .7rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Fact tiles. */
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: .75rem;
+  margin-bottom: 2rem;
+}
+
+.fact {
+  padding: .75rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .6rem;
+}
+
+.fact-label {
+  margin-bottom: .2rem;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+}
+
+.fact-value {
+  font-weight: 600;
+  color: var(--bs-emphasis-color);
+}
+
+.fact-value.is-empty {
+  font-weight: 400;
+  color: var(--bs-secondary-color);
+}
+
+/* History timeline: a vertical line with a status-colored dot per entry. */
+.timeline {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 1.75rem;
+  list-style: none;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: .6rem;
+  bottom: .6rem;
+  left: .45rem;
+  width: 2px;
+  background-color: var(--bs-border-color);
+}
+
+.timeline-entry {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .25rem 1rem;
+  padding: .5rem 0;
+}
+
+.timeline-entry::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -1.75rem;
+  width: .9rem;
+  height: .9rem;
+  border: 2px solid var(--bs-body-bg);
+  border-radius: 50%;
+  background-color: var(--status-color);
+  transform: translateY(-50%);
+}
+
+.timeline-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+}
+
+.timeline-time {
+  font-size: .85rem;
+  color: var(--bs-secondary-color);
+}
+
+/* ---------- Create / Edit form ---------- */
+.form-page {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.form-panel {
+  padding: 1.5rem;
+  border-radius: .75rem;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.form-section + .form-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.form-section-title {
+  margin-bottom: .75rem;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: 1.75rem;
+}
+
+/* Status pills: radio buttons (.btn-check, visually hidden) with their labels styled as pills. */
+.status-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.status-pill {
+  padding: .35rem .9rem;
+  border: 1px solid color-mix(in srgb, var(--status-color) 45%, transparent);
+  border-radius: 999px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--status-color);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.status-pill:hover {
+  background-color: color-mix(in srgb, var(--status-color) 10%, transparent);
+}
+
+.btn-check:checked + .status-pill {
+  border-color: var(--status-color);
+  color: var(--bs-emphasis-color);
+  background-color: color-mix(in srgb, var(--status-color) 28%, transparent);
+}
+
+.btn-check:focus-visible + .status-pill {
+  outline: 2px solid var(--status-color);
+  outline-offset: 2px;
+}
+
+
+/* ---------- Dashboard: summary strip ---------- */
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .summary-strip { grid-template-columns: repeat(4, 1fr); }
+}
+
+.summary-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--bs-emphasis-color);
+}
+
+.summary-hint {
+  font-size: .8rem;
+  color: var(--bs-secondary-color);
+}
+
+/* ---------- Dashboard: columns ---------- */
+.board-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* Scrolling a column doesn't also scroll the page at its ends. */
+}
+
+.board-column-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-left: auto;
+  border-radius: .4rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+}
+
+.board-column-add:hover,
+.board-column-add:focus-visible {
+  color: var(--status-color);
+  background-color: color-mix(in srgb, var(--status-color) 15%, transparent);
+}
+
+.board-range-note {
+  margin: -.5rem 0 1rem;
+  font-size: .9rem;
+  color: var(--bs-secondary-color);
+}
+
+/* First run: shown instead of the board when there are no jobs at all. */
+.board-welcome {
+  max-width: 34rem;
+  margin: 3rem auto;
+  padding: 2.5rem 2rem;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: .75rem;
+  text-align: center;
+  background-color: var(--bs-tertiary-bg);
+}
+
+/* ---------- Dashboard: cards ---------- */
+.job-card-location {
+  min-width: 0;
+  font-size: .8rem;
+  color: var(--bs-secondary-color);
+}
+
+/* With a mouse, the menu button appears on hover or keyboard focus; on touch screens it stays visible. */
+@media (hover: hover) and (pointer: fine) {
+  .job-card-menu-button {
+    opacity: 0;
+    transition: opacity .15s ease, color .15s ease, background-color .15s ease;
+  }
+
+  .job-card:hover .job-card-menu-button,
+  .job-card:focus-within .job-card-menu-button,
+  .job-card-menu-button[aria-expanded="true"] {
+    opacity: 1;
+  }
+}
+
+/* ---------- Dashboard: collapsible Archived ---------- */
+.archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+}
+
+.archived-chevron {
+  display: inline-block;
+  font-size: .9em;
+  color: var(--bs-secondary-color);
+  transition: transform .2s ease;
+}
+
+.archived-toggle:not(.collapsed) .archived-chevron {
+  transform: rotate(90deg);
+}
+
+/* While dragging a board card, open the list even if it's collapsed, so it can take the drop. */
+body.is-dragging-job:not(.is-dragging-archived) #archived-collapse {
+  display: block !important;
+  height: auto !important;
 }

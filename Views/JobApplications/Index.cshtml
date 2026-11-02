@@ -10,58 +10,115 @@
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
     <h1 class="page-title mb-0">Application Tracker</h1>
     <div class="d-flex align-items-center gap-2">
-        @* GET form: changing the range reloads the board with ?range=... (auto-submitted by job-board.js). *@
-        <form id="range-form" method="get" asp-action="Index">
-            <select name="range" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Range)">
-                @foreach (JobBoardRange range in Enum.GetValues<JobBoardRange>())
-                {
-                    <option value="@range" selected="@(range == Model.Range)">@range.GetDisplayName()</option>
-                }
-            </select>
-            <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
-        </form>
+        @if (Model.HasAnyJobs)
+        {
+            @* GET form: changing the range reloads the board with ?range=... (auto-submitted by job-board.js). *@
+            <form id="range-form" method="get" asp-action="Index">
+                <select name="range" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Range)">
+                    @foreach (JobBoardRange range in Enum.GetValues<JobBoardRange>())
+                    {
+                        <option value="@range" selected="@(range == Model.Range)">@range.GetDisplayName()</option>
+                    }
+                </select>
+                <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
+            </form>
+        }
         <a asp-action="Create" class="btn btn-primary text-nowrap">+ Add job</a>
     </div>
 </div>
 
-<div id="job-board" class="job-board"
-     data-update-url="@Url.Action("UpdateStatus")" data-delete-url="@Url.Action("DeleteFromBoard")">
-    @foreach (JobBoardColumn column in Model.Columns)
-    {
-        <section class="board-column status-@column.Status.ToString().ToLowerInvariant()">
-            <header class="board-column-header">
-                <h2 class="board-column-title">@column.Title</h2>
-                <span class="board-column-count">@column.Jobs.Count</span>
-            </header>
+@if (!Model.HasAnyJobs)
+{
+    @* First run: one welcoming message instead of four empty columns. *@
+    <section class="board-welcome">
+        <h2 class="section-title mb-2">Track your first application</h2>
+        <p class="text-body-secondary mb-4">Add a job you've applied to, or one you're saving for later. It'll show up here as a card you can drag between stages.</p>
+        <a asp-action="Create" class="btn btn-primary btn-lg">+ Add your first job</a>
+    </section>
+}
+else
+{
+    @* Summary strip: numbers for the jobs shown in the selected range. job-board.js updates them after moves. *@
+    <section id="board-summary" class="summary-strip" aria-label="Summary">
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Summary.Active)</div>
+            <div class="summary-value" data-summary="active">@Model.Summary.Active</div>
+            <div class="summary-hint">not archived</div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Summary.AppliedThisWeek)</div>
+            <div class="summary-value" data-summary="applied-this-week">@Model.Summary.AppliedThisWeek</div>
+            <div class="summary-hint">last 7 days</div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Summary.ResponseRate)</div>
+            <div class="summary-value" data-summary="response-rate">@(Model.Summary.ResponseRate is int rate ? $"{rate}%" : "—")</div>
+            <div class="summary-hint" data-summary="response-detail">
+                @(Model.Summary.AppliedCount == 0
+                    ? "no applications yet"
+                    : $"{Model.Summary.RespondedCount} of {Model.Summary.AppliedCount} reached interviews")
+            </div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Summary.Offers)</div>
+            <div class="summary-value" data-summary="offers">@Model.Summary.Offers</div>
+            <div class="summary-hint">received</div>
+        </div>
+    </section>
 
-            <div class="board-list" data-status="@column.Status" data-status-label="@column.Status.GetDisplayName()">
-                @foreach (JobCardViewModel jobApp in column.Jobs)
+    @if (Model.VisibleCount == 0)
+    {
+        <p class="board-range-note">
+            No jobs updated in the @Model.Range.GetDisplayName().ToLowerInvariant().
+            <a asp-action="Index" asp-route-range="@JobBoardRange.AllTime">Show all time</a>
+        </p>
+    }
+
+    <div id="job-board" class="job-board"
+         data-update-url="@Url.Action("UpdateStatus")" data-delete-url="@Url.Action("DeleteFromBoard")">
+        @foreach (JobBoardColumn column in Model.Columns)
+        {
+            <section class="board-column status-@column.Status.ToString().ToLowerInvariant()">
+                <header class="board-column-header">
+                    <h2 class="board-column-title">@column.Title</h2>
+                    <span class="board-column-count">@column.Jobs.Count</span>
+                    <a asp-action="Create" asp-route-status="@column.Status" class="board-column-add"
+                       aria-label="Add a job to @column.Title" title="Add a job to @column.Title">+</a>
+                </header>
+
+                @* Scrolls on its own once it's taller than the window. *@
+                <div class="board-list" data-status="@column.Status">
+                    @foreach (JobCardViewModel jobApp in column.Jobs)
+                    {
+                        <partial name="_JobCard" model="jobApp" />
+                    }
+                    <p class="board-column-empty @(column.Jobs.Count > 0 ? "d-none" : "")">Drag a card here</p>
+                </div>
+            </section>
+        }
+    </div>
+
+    @* Archived jobs, collapsed by default. Also the drop target for archiving: while a board card is being
+       dragged, the list shows (even when collapsed or empty) with a dashed "Drop here to archive" overlay. *@
+    <section id="archived-section" class="status-@archived.ToString().ToLowerInvariant() @(Model.Archived.Count == 0 ? "d-none" : "")">
+        <h2 class="section-title mt-5 mb-3">
+            <button type="button" class="archived-toggle collapsed" data-bs-toggle="collapse" data-bs-target="#archived-collapse"
+                    aria-expanded="false" aria-controls="archived-collapse">
+                <span class="archived-chevron" aria-hidden="true">&#x25B8;</span>
+                Archived
+                <span id="archived-count" class="board-column-count">@Model.Archived.Count</span>
+            </button>
+        </h2>
+        <div id="archived-collapse" class="collapse">
+            <div id="archived-list" class="job-grid" data-status="@archived">
+                @foreach (JobCardViewModel jobApp in Model.Archived)
                 {
                     <partial name="_JobCard" model="jobApp" />
                 }
-                <p class="board-column-empty @(column.Jobs.Count > 0 ? "d-none" : "")">No jobs here yet.</p>
             </div>
-        </section>
-    }
-</div>
-
-<section id="archived-section" class="@(Model.Archived.Count == 0 ? "d-none" : "")">
-    <h2 class="section-title mt-5 mb-3">Archived</h2>
-    <div id="archived-list" class="job-grid">
-        @foreach (JobCardViewModel jobApp in Model.Archived)
-        {
-            <partial name="_JobCard" model="jobApp" />
-        }
-    </div>
-</section>
-
-@* Drop target for archiving a job. Shown only while a card is being dragged. *@
-<div id="drop-zones" class="drop-zones" aria-hidden="true">
-    <div class="drop-zone status-@archived.ToString().ToLowerInvariant()"
-         data-status="@archived" data-status-label="@archived.GetDisplayName()">
-        <span class="drop-zone-label">Archive</span>
-    </div>
-</div>
+        </div>
+    </section>
+}
 
 @* Delete confirmation, opened from a card's menu. job-board.js fills in the job's name. *@
 <div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-title" aria-hidden="true">

@@ -1,18 +1,31 @@
 @{
     ViewData["Title"] = "Edit job application";
+    // The form view model has no ID; it comes from the route (/JobApplications/Edit/{id}).
+    object? jobID = ViewContext.RouteData.Values["id"];
 }
 @model JobApplicationFormViewModel
 
-<h1>Edit a job application</h1>
+<div class="form-page">
+    <a asp-action="Details" asp-route-id="@jobID" class="back-link">&larr; Back to job</a>
 
-<form asp-action="Edit" method="post">
-    <partial name="_JobApplicationForm" />
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-</form>
+    <h1 class="page-title mb-1">Edit job application</h1>
+    @if (!string.IsNullOrWhiteSpace(Model.Title))
+    {
+        <p class="text-body-secondary mb-4">
+            @Model.Title@(string.IsNullOrWhiteSpace(Model.CompanyName) ? "" : $" at {Model.CompanyName}")
+        </p>
+    }
 
+    <form asp-action="Edit" method="post" class="form-panel">
+        <partial name="_JobApplicationForm" />
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save changes</button>
+            <a asp-action="Details" asp-route-id="@jobID" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/job-form.js"></script>
+    <script src="~/js/job-form.js" asp-append-version="true"></script>
 }

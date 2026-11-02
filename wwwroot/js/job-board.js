@@ -24,11 +24,10 @@
 
     const statusClass = status => "status-" + status.toLowerCase();
 
-    function setCardStatus(card, status, label) {
+    function setCardStatus(card, status) {
         card.classList.remove(statusClass(card.dataset.status));
         card.classList.add(statusClass(status));
         card.dataset.status = status;
-        card.querySelector(".status-badge").textContent = label;
 
         // Keep the card's menu in sync: the current status is highlighted and can't be picked.
         card.querySelectorAll(".job-card-menu [data-status]").forEach(item => {
@@ -53,7 +52,67 @@
             column.querySelector(".board-column-count").textContent = count;
             column.querySelector(".board-column-empty").classList.toggle("d-none", count > 0);
         });
-        archivedSection.classList.toggle("d-none", !archivedList.querySelector(".job-card"));
+        const archivedCount = archivedList.querySelectorAll(".job-card").length;
+        document.getElementById("archived-count").textContent = archivedCount;
+        archivedSection.classList.toggle("d-none", archivedCount === 0);
+        refreshSummary();
+    }
+
+    // ---------- Summary strip ----------
+    // Same rules as JobBoardSummary.FromCards (C#), computed from the cards' data attributes.
+    const responseStatuses = ["Interviewing", "OfferReceived"];
+
+    // Today as "yyyy-mm-dd" in local time, matching the server's DateTime.Today (same machine).
+    function todayString() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function refreshSummary() {
+        const weekStart = new Date();
+        weekStart.setHours(0, 0, 0, 0);
+        weekStart.setDate(weekStart.getDate() - 6);   // Last 7 days, today included.
+
+        let active = 0, appliedThisWeek = 0, applied = 0, responded = 0, offers = 0;
+        document.querySelectorAll("#job-board .job-card, #archived-list .job-card").forEach(card => {
+            const status = card.dataset.status;
+            if (status !== "Archived")
+                active++;
+            if (status === "OfferReceived")
+                offers++;
+
+            const appliedAt = card.dataset.appliedAt;
+            if (!appliedAt)
+                return;
+            applied++;
+            if (card.dataset.hasResponse === "true")
+                responded++;
+            if (new Date(`${appliedAt}T00:00`) >= weekStart)   // Parsed as local midnight.
+                appliedThisWeek++;
+        });
+
+        const set = (key, value) => {
+            const element = document.querySelector(`[data-summary="${key}"]`);
+            if (element)
+                element.textContent = value;
+        };
+        set("active", active);
+        set("applied-this-week", appliedThisWeek);
+        set("offers", offers);
+        set("response-rate", applied === 0 ? "—" : `${Math.round(100 * responded / applied)}%`);
+        set("response-detail", applied === 0 ? "no applications yet" : `${responded} of ${applied} reached interviews`);
+    }
+
+    // Applies the server's rules to the card's summary data after a status change
+    // (see JobApplicationService.ChangeStatus): Saved clears AppliedAt; leaving Saved sets it to today
+    // if empty; reaching Interviewing/Offer counts as a response from then on.
+    function applySummaryRules(card, status) {
+        if (status === "Saved")
+            delete card.dataset.appliedAt;
+        else if (!card.dataset.appliedAt)
+            card.dataset.appliedAt = todayString();
+        if (responseStatuses.includes(status))
+            card.dataset.hasResponse = "true";
     }
 
     async function saveStatus(id, status) {
@@ -70,19 +129,21 @@
     }
 
     // Shared by drag and menu. `origin` = { list, next }: where to put the card back if saving fails.
-    async function moveCard(card, status, label, origin) {
+    async function moveCard(card, status, origin) {
         const ageLabel = card.querySelector(".job-card-age");
         const previous = {
             status: card.dataset.status,
-            label: card.querySelector(".status-badge").textContent,
             age: ageLabel.textContent,
+            appliedAt: card.dataset.appliedAt,
+            hasResponse: card.dataset.hasResponse,
         };
 
         // Update the UI first so the move feels instant. Lists are ordered by last update,
         // so a moved card goes to the top of its new list.
         if (status !== previous.status)
             ageLabel.textContent = "Today";
-        setCardStatus(card, status, label);
+        setCardStatus(card, status);
+        applySummaryRules(card, status);
         listFor(status).prepend(card);
         refreshCounts();
         card.classList.add("is-saving");
@@ -91,8 +152,13 @@
             await saveStatus(card.dataset.id, status);
         } catch (error) {
             console.error(error);
-            setCardStatus(card, previous.status, previous.label);
+            setCardStatus(card, previous.status);
             ageLabel.textContent = previous.age;
+            if (previous.appliedAt)
+                card.dataset.appliedAt = previous.appliedAt;
+            else
+                delete card.dataset.appliedAt;
+            card.dataset.hasResponse = previous.hasResponse;
             origin.list.insertBefore(card, origin.next?.parentNode === origin.list ? origin.next : null);
             refreshCounts();
             showError("Couldn't update the job's status. Please try again.");
@@ -109,10 +175,10 @@
         card.addEventListener("animationend", () => card.classList.remove("is-moved"), { once: true });
     }
 
-    // Fires on the list a card was dropped into (columns and the Archive drop zone).
+    // Fires on the list a card was dropped into (columns and the Archived grid).
     function onAdd(evt) {
         const origin = { list: evt.from, next: evt.from.children[evt.oldIndex] ?? null };
-        moveCard(evt.item, evt.to.dataset.status, evt.to.dataset.statusLabel, origin);
+        moveCard(evt.item, evt.to.dataset.status, origin);
     }
 
     // Status menu: picking an item moves the card just like a drop would.
@@ -127,7 +193,7 @@
 
         bootstrap.Dropdown.getInstance(card.querySelector('[data-bs-toggle="dropdown"]'))?.hide();
         const origin = { list: card.parentElement, next: card.nextElementSibling };
-        moveCard(card, item.dataset.status, item.dataset.statusLabel, origin);
+        moveCard(card, item.dataset.status, origin);
         highlight(card);
     });
 
@@ -220,12 +286,14 @@
         ghostClass: "job-card-ghost",
         chosenClass: "job-card-chosen",
         fallbackClass: "job-card-floating",
-        onStart: () => {
+        onStart: evt => {
             isDragging = true;
             document.body.classList.add("is-dragging-job");
+            // An archived card being dragged out shouldn't get the "Drop here to archive" overlay.
+            document.body.classList.toggle("is-dragging-archived", evt.from === archivedList);
         },
         onEnd: () => {
-            document.body.classList.remove("is-dragging-job");
+            document.body.classList.remove("is-dragging-job", "is-dragging-archived");
             if (isDragging)
                 lastDragEnd = Date.now();
             isDragging = false;
@@ -235,11 +303,23 @@
     board.querySelectorAll(".board-list").forEach(list =>
         Sortable.create(list, { ...shared, group: { name: "jobs" }, onAdd }));
 
-    // Archived cards can be dragged out, but not dropped back in directly (use a drop zone).
-    Sortable.create(archivedList, { ...shared, group: { name: "jobs", put: false } });
+    // The Archived grid works both ways: drag cards out of it, or drop board cards into it to archive them.
+    Sortable.create(archivedList, { ...shared, group: { name: "jobs" }, onAdd });
 
-    document.querySelectorAll(".drop-zone").forEach(zone =>
-        Sortable.create(zone, { ...shared, group: { name: "jobs", pull: false }, onAdd }));
+    // Archived starts collapsed; remember if you open it. Storage can be blocked (e.g. private windows),
+    // so every access is wrapped and failure just means "collapsed".
+    const archivedCollapse = document.getElementById("archived-collapse");
+    const archivedToggle = document.querySelector(".archived-toggle");
+    const storageKey = "jobBoard.archivedOpen";
+    try {
+        if (localStorage.getItem(storageKey) === "true") {
+            archivedCollapse.classList.add("show");   // Open instantly, without the animation.
+            archivedToggle.classList.remove("collapsed");
+            archivedToggle.setAttribute("aria-expanded", "true");
+        }
+    } catch { }
+    archivedCollapse.addEventListener("shown.bs.collapse", () => { try { localStorage.setItem(storageKey, "true"); } catch { } });
+    archivedCollapse.addEventListener("hidden.bs.collapse", () => { try { localStorage.removeItem(storageKey); } catch { } });
 
     // Reload the board as soon as a different time range is picked.
     const rangeForm = document.getElementById("range-form");

@@ -1,60 +1,122 @@
-@model JobApplication
+@model JobDetailsViewModel
 @{
     ViewData["Title"] = Model.Title;
+    string StatusClass(JobApplicationStatus status) => "status-" + status.ToString().ToLowerInvariant();
 }
 
-<h1>@Model.Title</h1>
-<h4 class="text-body-secondary">@Model.Company.Name</h4>
+<div class="details-page">
+    <a asp-action="Index" class="back-link">&larr; Board</a>
 
-<dl class="row mt-4">
-    <dt class="col-sm-3">Status</dt>
-    <dd class="col-sm-9">
-        <span class="status-badge status-@Model.Status.ToString().ToLowerInvariant()">@Model.Status.GetDisplayName()</span>
-    </dd>
+    @* Header: like a large job card. *@
+    <header class="details-header @StatusClass(Model.Status)">
+        <span class="company-monogram company-monogram-lg">@char.ToUpperInvariant(Model.CompanyName[0])</span>
 
-    <dt class="col-sm-3">Location</dt>
-    <dd class="col-sm-9">@(Model.Location ?? "—")</dd>
+        <div class="details-heading">
+            <div class="details-company">@Model.CompanyName</div>
+            <h1 class="page-title mb-2">@Model.Title</h1>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="status-badge">@Model.Status.GetDisplayName()</span>
+                <span class="small text-body-secondary" title="Since @DateDisplay.Full(Model.StatusSince)">@Model.StatusDuration</span>
+            </div>
+        </div>
 
-    <dt class="col-sm-3">Posting</dt>
-    <dd class="col-sm-9">
-        @if (Model.PostingURL is not null)
-        {
-            <a href="@Model.PostingURL" target="_blank" rel="noopener">View posting</a>
-        }
-        else
-        {
-            <text>—</text>
-        }
-    </dd>
-</dl>
+        <div class="details-actions">
+            @if (Model.PostingHost is not null)
+            {
+                <a href="@Model.PostingURL" target="_blank" rel="noopener" class="btn btn-outline-secondary posting-button"
+                   title="@Model.PostingURL">
+                    <span>Open posting &#x2197;</span>
+                    <span class="posting-host">@Model.PostingHost</span>
+                </a>
+            }
+            <a asp-action="Edit" asp-route-id="@Model.ID" class="btn btn-primary">Edit</a>
+            <div class="dropdown">
+                <button type="button" class="btn btn-outline-secondary details-menu-button" data-bs-toggle="dropdown"
+                        aria-expanded="false" aria-label="More actions" title="More actions">&#x22EF;</button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#delete-modal">Delete…</button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
 
-<h3 class="mt-4">History</h3>
-<ul class="list-group">
-    @foreach (var change in Model.StatusChanges)
-    {
-        <li class="list-group-item">
-            @change.Time.ToLocalTime().ToString("MMM d, yyyy h:mm tt"):
-            @change.OldStatus.GetDisplayName() → @change.NewStatus.GetDisplayName()
-        </li>
-    }
-</ul>
+    @* Facts: the job's stored details and dates. Relative text, exact date on hover. *@
+    <section class="fact-grid" aria-label="Job details">
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Location)</div>
+            <div class="fact-value @(Model.Location is null ? "is-empty" : "")">@(Model.Location ?? "—")</div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.PostedAt)</div>
+            @if (Model.PostedAt is DateOnly posted)
+            {
+                <div class="fact-value" title="@DateDisplay.Full(posted)">@DateDisplay.Ago(posted)</div>
+            }
+            else
+            {
+                <div class="fact-value is-empty">—</div>
+            }
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.AppliedAt)</div>
+            @if (Model.AppliedAt is DateOnly applied)
+            {
+                <div class="fact-value" title="@DateDisplay.Full(applied)">@DateDisplay.Ago(applied)</div>
+            }
+            else
+            {
+                <div class="fact-value is-empty">Not yet</div>
+            }
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.CreatedAt)</div>
+            <div class="fact-value" title="@DateDisplay.Full(Model.CreatedAt)">@DateDisplay.Ago(Model.CreatedAt)</div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.UpdatedAt)</div>
+            <div class="fact-value" title="@DateDisplay.Full(Model.UpdatedAt)">@DateDisplay.Ago(Model.UpdatedAt)</div>
+        </div>
+    </section>
 
-<div class="d-flex gap-2 mt-3">
-    <a asp-action="Edit" asp-route-id="@Model.ID" class="btn btn-outline-primary">Edit</a>
-    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete-modal">Delete</button>
-    <a asp-action="Index" class="btn btn-secondary">Back</a>
+    @* History, newest first. The last entry is always the job being added. *@
+    <section>
+        <h2 class="section-title mb-3">History</h2>
+        <ol class="timeline">
+            @foreach (JobTimelineEntry entry in Model.Timeline)
+            {
+                <li class="timeline-entry @StatusClass(entry.Status)">
+                    <div class="timeline-text">
+                        @if (entry.FromStatus is JobApplicationStatus from)
+                        {
+                            <span class="text-body-secondary">@from.GetDisplayName()</span>
+                            <span class="text-body-secondary" aria-label="to">&rarr;</span>
+                            <span class="status-badge">@entry.Status.GetDisplayName()</span>
+                        }
+                        else
+                        {
+                            <span>Added as</span>
+                            <span class="status-badge">@entry.Status.GetDisplayName()</span>
+                        }
+                    </div>
+                    <time class="timeline-time" datetime="@entry.Time.ToString("o")" title="@DateDisplay.Full(entry.Time)">@DateDisplay.Ago(entry.Time)</time>
+                </li>
+            }
+        </ol>
+    </section>
 </div>
 
-@* Delete confirmation dialog. *@
-<div class="modal fade" id="delete-modal" tabindex="-1">
-    <div class="modal-dialog">
+@* Delete confirmation dialog, opened from the ⋯ menu. *@
+<div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Delete job</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="delete-modal-title">Delete job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Delete <strong>@Model.Title at @Model.Company.Name</strong>? This can't be undone.
+                Delete <strong>@Model.Title at @Model.CompanyName</strong>? This also removes its status history and can't be undone.
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
