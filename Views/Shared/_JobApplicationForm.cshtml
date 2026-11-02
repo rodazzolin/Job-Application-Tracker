@@ -74,3 +74,12 @@
         </div>
     </div>
 </fieldset>
+
+<fieldset class="form-section">
+    <legend class="form-section-title">Notes</legend>
+    @* id="Notes" (from asp-for) is the target of the Details page's "Edit notes" link. *@
+    <label asp-for="Notes" class="visually-hidden"></label>
+    <textarea asp-for="Notes" class="form-control notes-input" rows="5"
+              placeholder="Contacts, interview prep, salary range, anything worth remembering..."></textarea>
+    <span asp-validation-for="Notes" class="text-danger"></span>
+</fieldset>

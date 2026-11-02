@@ -18,6 +18,10 @@ public class JobApplicationsController : Controller
     private readonly IEnumerable<IJobPostingReader> readers;
     private string UserID => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+    // Blank or whitespace-only notes are stored as null, so "no notes" has one representation.
+    private static string? NormalizeNotes(string? notes) =>
+        string.IsNullOrWhiteSpace(notes) ? null : notes.TrimEnd();
+
     public JobApplicationsController(AppDbContext ctx, JobApplicationService svr, IEnumerable<IJobPostingReader> rd) : base()
     {
         context = ctx;   
@@ -131,6 +135,7 @@ public class JobApplicationsController : Controller
             PostingURL = form.PostingURL,
             AppliedAt = form.Status.Equals(JobApplicationStatus.Saved) ? null : form.AppliedAt,
             PostedAt = form.PostedAt,
+            Notes = NormalizeNotes(form.Notes),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -160,6 +165,7 @@ public class JobApplicationsController : Controller
             AppliedAt = jobApp.AppliedAt,
             CompanyName = jobApp.Company.Name,
             Status = jobApp.Status,
+            Notes = jobApp.Notes,
         };
 
         return View(form);
@@ -189,6 +195,7 @@ public class JobApplicationsController : Controller
         jobApp.Location = form.Location;
         jobApp.PostingURL = form.PostingURL;
         jobApp.PostedAt = form.PostedAt;
+        jobApp.Notes = NormalizeNotes(form.Notes);
 
         // Change status (logs a StatusChange row if it differs), then let the form's AppliedAt win.
         jobService.ChangeStatus(jobApp, form.Status);

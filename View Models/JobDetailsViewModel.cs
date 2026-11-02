@@ -37,6 +37,7 @@ public class JobDetailsViewModel
     [DataType(DataType.DateTime)]
     [DisplayName("Last updated")]
     public required DateTime UpdatedAt {get; init;}        // UTC.
+    public string? Notes {get; init;}
 
     // Newest first. Always has at least one entry: when the job was added.
     public required List<JobTimelineEntry> Timeline {get; init;}
@@ -87,6 +88,7 @@ public class JobDetailsViewModel
             AppliedAt = job.AppliedAt,
             CreatedAt = job.CreatedAt,
             UpdatedAt = job.UpdatedAt,
+            Notes = job.Notes,
             Timeline = timeline,
         };
     }

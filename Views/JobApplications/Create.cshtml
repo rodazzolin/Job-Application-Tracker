@@ -13,6 +13,12 @@
     <form id="autofill-form" class="autofill-box mb-4" data-lookup-url="@Url.Action("Lookup")" novalidate>
         <label for="autofill-url" class="form-label fw-semibold mb-1">Autofill from a job posting</label>
         <p class="form-text mt-0 mb-2">Paste the posting's link to fill in the details below. You can review everything before saving.</p>
+        <p class="form-text mt-0 mb-1">Supported sites:</p>
+        @* form-text on the list styles the items too (they inherit its small, muted text). *@
+        <ul class="form-text mt-0 mb-2">
+            <li>Workday</li>
+            <li>Greenhouse</li>
+        </ul>
         <div class="input-group">
             <input id="autofill-url" type="url" class="form-control" placeholder="https://..." autocomplete="off" required />
             <button id="autofill-button" type="submit" class="btn btn-outline-primary">

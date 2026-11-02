@@ -80,6 +80,25 @@
         </div>
     </section>
 
+    <section class="mb-4" aria-labelledby="notes-title">
+        <div class="d-flex align-items-baseline justify-content-between gap-2 mb-3">
+            <h2 id="notes-title" class="section-title mb-0">Notes</h2>
+            @* Jumps to the notes box on the Edit page (its textarea has id="Notes"). *@
+            <a asp-action="Edit" asp-route-id="@Model.ID" asp-fragment="Notes" class="small">
+                @(Model.Notes is null ? "Add notes" : "Edit notes")
+            </a>
+        </div>
+        @if (Model.Notes is not null)
+        {
+            @* Razor HTML-encodes the text; CSS keeps the user's line breaks. *@
+            <div class="notes-body">@Model.Notes</div>
+        }
+        else
+        {
+            <p class="notes-empty">No notes yet.</p>
+        }
+    </section>
+
     @* History, newest first. The last entry is always the job being added. *@
     <section>
         <h2 class="section-title mb-3">History</h2>

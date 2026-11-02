@@ -1,0 +1,23 @@
+@page
+@model LogoutModel
+@{
+    ViewData["Title"] = "Log out";
+}
+
+@* The navbar's "Log out" button posts here; Identity signs you out and redirects back to this page. *@
+<div class="auth-page text-center">
+    @if (User.Identity?.IsAuthenticated ?? false)
+    {
+        <h1 class="page-title">Log out?</h1>
+        <p class="text-body-secondary mb-4">You're logged in as @User.Identity.Name.</p>
+        <form method="post">
+            <button type="submit" class="btn btn-primary">Log out</button>
+        </form>
+    }
+    else
+    {
+        <h1 class="page-title">You're logged out</h1>
+        <p class="text-body-secondary mb-4">See you next time.</p>
+        <a asp-page="./Login" asp-route-returnUrl="@Url.Action("Index", "JobApplications", new { area = "" })" class="btn btn-primary">Log in again</a>
+    }
+</div>

@@ -1,0 +1,12 @@
+@* Replaces the Identity UI package's own layout (a separate light-theme page with its own Bootstrap)
+   so every Identity page, including the ones we don't override, sits inside the app's layout. *@
+@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+@RenderBody()
+
+@* The package's pages define a Scripts section; pass it through to the app layout. *@
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

@@ -9,7 +9,7 @@ html {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem var(--bs-body-bg), 0 0 0 0.25rem #258cfb;
 }
 
 html {
@@ -30,6 +30,47 @@ body {
   text-align: start;
 }
 
+/* ---------- Theme ---------- */
+/* Card shadows: dark mode needs strong ones to show at all; on light backgrounds they'd look heavy. */
+:root {
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+  --card-shadow-hover: 0 .35rem .9rem rgba(0, 0, 0, .45);
+  --card-shadow-floating: 0 .75rem 1.5rem rgba(0, 0, 0, .5);
+}
+
+[data-bs-theme="light"] {
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  --card-shadow-hover: 0 .35rem .9rem rgba(0, 0, 0, .14);
+  --card-shadow-floating: 0 .75rem 1.5rem rgba(0, 0, 0, .2);
+}
+
+/* Navbar light/dark toggle: shows the sun in dark mode (switch to light) and the moon in light mode. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-right: .5rem;
+  padding: 0;
+  border: 0;
+  border-radius: .5rem;
+  color: var(--bs-navbar-color);
+  background: transparent;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  color: var(--bs-emphasis-color);
+  background-color: color-mix(in srgb, var(--bs-emphasis-color) 10%, transparent);
+}
+
+[data-bs-theme="dark"] .theme-icon-moon,
+[data-bs-theme="light"] .theme-icon-sun {
+  display: none;
+}
+
 /* ---------- Status colors ---------- */
 /* Any element with a status-* class exposes --status-color to its children. */
 .status-saved         { --status-color: #8b949e; }
@@ -37,6 +78,13 @@ body {
 .status-interviewing  { --status-color: #f0b429; }
 .status-offerreceived { --status-color: #2fbf71; }
 .status-archived      { --status-color: #6e7681; }
+
+/* Light mode: darker shades, so status text and pills stay readable on white. */
+[data-bs-theme="light"] .status-saved         { --status-color: #656d76; }
+[data-bs-theme="light"] .status-applied       { --status-color: #0969da; }
+[data-bs-theme="light"] .status-interviewing  { --status-color: #9a6700; }
+[data-bs-theme="light"] .status-offerreceived { --status-color: #1a7f37; }
+[data-bs-theme="light"] .status-archived      { --status-color: #6e7781; }
 
 .status-badge {
   display: inline-block;
@@ -136,7 +184,7 @@ body {
   border-left: 3px solid var(--status-color);
   border-radius: .5rem;
   background-color: var(--bs-body-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+  box-shadow: var(--card-shadow);
   color: var(--bs-body-color);
   text-decoration: none;
   transition: background-color .15s ease, box-shadow .15s ease;
@@ -148,7 +196,7 @@ body {
 .job-card:has(.stretched-link:focus-visible) {
   background-color: var(--bs-secondary-bg);
   color: var(--bs-body-color);
-  box-shadow: 0 .35rem .9rem rgba(0, 0, 0, .45);
+  box-shadow: var(--card-shadow-hover);
 }
 
 /* The title link takes keyboard focus, so draw the focus ring around the whole card. */
@@ -208,7 +256,7 @@ body {
                 0 0 1.25rem color-mix(in srgb, var(--status-color) 45%, transparent);
   }
   to {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+    box-shadow: var(--card-shadow);
   }
 }
 
@@ -274,7 +322,7 @@ body {
   /* SortableJS moves this copy with `transform`; the card's hover transition would make it lag behind the pointer. */
   transition: none !important;
   cursor: grabbing;
-  box-shadow: 0 .75rem 1.5rem rgba(0, 0, 0, .5);
+  box-shadow: var(--card-shadow-floating);
 }
 
 .job-card.is-saving {
@@ -535,6 +583,23 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-gho
   color: var(--bs-secondary-color);
 }
 
+/* Notes: the user's text as typed, line breaks kept. */
+.notes-body {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .6rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;   /* Long URLs wrap instead of widening the page. */
+}
+
+.notes-empty {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: .6rem;
+  color: var(--bs-secondary-color);
+}
+
 /* ---------- Create / Edit form ---------- */
 .form-page {
   max-width: 44rem;
@@ -560,6 +625,11 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-gho
   letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--bs-secondary-color);
+}
+
+.notes-input {
+  min-height: 7rem;
+  resize: vertical;
 }
 
 .form-actions {
@@ -720,4 +790,87 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-gho
 body.is-dragging-job:not(.is-dragging-archived) #archived-collapse {
   display: block !important;
   height: auto !important;
+}
+
+/* ---------- Account pages (Areas/Identity) ---------- */
+.auth-page {
+  max-width: 26rem;
+  margin: 2rem auto 0;
+}
+
+.auth-switch {
+  margin-top: 1.25rem;
+  text-align: center;
+  color: var(--bs-secondary-color);
+}
+
+/* ---------- Home page ---------- */
+.home-page {
+  max-width: 60rem;
+  margin-inline: auto;
+}
+
+.home-hero {
+  max-width: 40rem;
+  margin: 3rem auto 4rem;
+  text-align: center;
+}
+
+.home-title {
+  margin-bottom: 1rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+
+.home-lead {
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  color: var(--bs-secondary-color);
+}
+
+/* Numbered steps: the number comes from a CSS counter and sits in a status-colored circle. */
+.home-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: home-step;
+}
+
+.home-step {
+  padding: 1.25rem;
+  border-top: 3px solid var(--status-color);
+  border-radius: .75rem;
+  background-color: var(--bs-tertiary-bg);
+  counter-increment: home-step;
+}
+
+.home-step::before {
+  content: counter(home-step);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: .75rem;
+  border-radius: 50%;
+  font-weight: 800;
+  color: var(--status-color);
+  background-color: color-mix(in srgb, var(--status-color) 16%, transparent);
+}
+
+.home-step-title {
+  margin-bottom: .35rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.home-step p {
+  margin: 0;
+  font-size: .9rem;
+  color: var(--bs-secondary-color);
 }

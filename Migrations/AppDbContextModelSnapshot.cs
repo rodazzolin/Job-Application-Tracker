@@ -68,6 +68,10 @@ namespace JobTracker.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(10000)
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateOnly?>("PostedAt")
                         .HasColumnType("date");
 

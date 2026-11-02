@@ -1,0 +1,43 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Create an account";
+}
+
+<div class="auth-page">
+    <h1 class="page-title mb-1">Create an account</h1>
+    <p class="text-body-secondary mb-4">Start tracking your job applications.</p>
+
+    <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-panel">
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+        <div class="mb-3">
+            <label asp-for="Input.Email" class="form-label">Email</label>
+            <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus />
+            <span asp-validation-for="Input.Email" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Input.Password" class="form-label">Password</label>
+            <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true"
+                   aria-describedby="password-hint" />
+            @* Identity's default password rules (we don't change them in Program.cs). *@
+            <div id="password-hint" class="form-text">At least 6 characters, with an uppercase and a lowercase letter, a number and a symbol.</div>
+            <span asp-validation-for="Input.Password" class="text-danger"></span>
+        </div>
+        <div class="mb-4">
+            <label asp-for="Input.ConfirmPassword" class="form-label">Confirm password</label>
+            <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" />
+            <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Create account</button>
+    </form>
+
+    <p class="auth-switch">
+        Already have an account? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Log in</a>
+    </p>
+</div>
+
+@section Scripts {
+    <partial name="/Views/Shared/_ValidationScriptsPartial.cshtml" />
+}

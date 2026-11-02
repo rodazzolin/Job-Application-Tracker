@@ -12,6 +12,7 @@ public class JobApplication
     public DateOnly? PostedAt {get; set;}   // The date this role was posted by the employer.
     public DateOnly? AppliedAt {get; set;}  // The date this application was submitted to the employer.
                                             // Defaults to CreatedAt.
+    public string? Notes {get; set;}        // Free-form text from the user. Null when empty.
     public int CompanyID {get; set;}
     public Company Company {get; set;} = null!;
     public List<JobApplicationStatusChange> StatusChanges {get; set;} = [];

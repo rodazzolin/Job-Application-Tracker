@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Track your job search";
+    bool signedIn = User.Identity?.IsAuthenticated ?? false;
+    // After logging in or registering from here, go straight to the board instead of back to this page.
+    string? boardUrl = Url.Action("Index", "JobApplications");
+}
+
+<div class="home-page">
+    <section class="home-hero">
+        <h1 class="home-title">Your job search, on one board.</h1>
+        <p class="home-lead">
+            JobTracker keeps every application in one place: what you've saved, where you've applied,
+            which interviews are coming up and which offers came in. Move jobs along as things change,
+            and look back at how each one went.
+        </p>
+
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            @if (signedIn)
+            {
+                <a asp-controller="JobApplications" asp-action="Index" class="btn btn-primary btn-lg">Go to your board</a>
+                <a asp-controller="JobApplications" asp-action="Create" class="btn btn-outline-secondary btn-lg">Add a job</a>
+            }
+            else
+            {
+                <a asp-area="Identity" asp-page="/Account/Register" asp-route-returnUrl="@boardUrl" class="btn btn-primary btn-lg">Create a free account</a>
+                <a asp-area="Identity" asp-page="/Account/Login" asp-route-returnUrl="@boardUrl" class="btn btn-outline-secondary btn-lg">Log in</a>
+            }
+        </div>
+    </section>
+
+    <section aria-labelledby="getting-started">
+        <h2 id="getting-started" class="section-title text-center mb-4">Getting started</h2>
+
+        @* Each step borrows a status color, following the board from left to right. *@
+        <ol class="home-steps">
+            <li class="home-step status-saved">
+                <h3 class="home-step-title">Create an account</h3>
+                <p>Sign up with an email and password. Your applications are private to you.</p>
+            </li>
+            <li class="home-step status-applied">
+                <h3 class="home-step-title">Add a job</h3>
+                <p>Paste a link to a Greenhouse or Workday posting to fill in the details automatically, or type them in yourself.</p>
+            </li>
+            <li class="home-step status-interviewing">
+                <h3 class="home-step-title">Move it along</h3>
+                <p>Drag cards across the board as you go from <em>Saved</em> to <em>Applied</em>, <em>Interviewing</em> and <em>Offer</em>.</p>
+            </li>
+            <li class="home-step status-offerreceived">
+                <h3 class="home-step-title">Look back</h3>
+                <p>Open any job to see its details and a timeline of every status change. Archive the ones that are done.</p>
+            </li>
+        </ol>
+    </section>
+</div>

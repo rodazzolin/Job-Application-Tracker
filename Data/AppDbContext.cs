@@ -30,6 +30,7 @@ public class AppDbContext : IdentityDbContext
             entity.Property(j => j.Status).HasConversion<string>().HasMaxLength(FieldLengths.Status);
             entity.Property(j => j.PostingURL).HasMaxLength(FieldLengths.URL);
             entity.Property(j => j.Location).HasMaxLength(FieldLengths.Location);
+            entity.Property(j => j.Notes).HasMaxLength(FieldLengths.Notes);
             entity.HasOne<IdentityUser>().WithMany().HasForeignKey(j => j.UserID).OnDelete(DeleteBehavior.NoAction);
         });
 

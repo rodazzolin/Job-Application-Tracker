@@ -26,6 +26,9 @@ public class JobApplicationFormViewModel : IValidatableObject
     [DataType(DataType.Date)]
     [DisplayName("Posted At")]
     public DateOnly? PostedAt {get; set;}
+    [MaxLength(FieldLengths.Notes)]
+    [DataType(DataType.MultilineText)]
+    public string? Notes {get; set;}
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
