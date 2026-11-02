@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 namespace JobTracker.Services.JobPostings;
 
@@ -51,7 +50,7 @@ public class GreenhouseReader : IJobPostingReader
         {
             job = await httpClient.GetFromJsonAsync<GreenhouseJobPosting>(apiURL, options);
         }
-        catch
+        catch (Exception ex) when (ex is HttpRequestException || ex is NotSupportedException || ex is JsonException)
         {
             return null;
         }

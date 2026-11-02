@@ -14,10 +14,10 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options =>
         options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<AppDbContext>();
 builder.Services.AddScoped<JobApplicationService>();
-builder.Services.AddHttpClient<IJobPostingReader, GreenhouseReader>(client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(10);
-});
+builder.Services.ConfigureHttpClientDefaults(http =>
+    http.ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10)));
+builder.Services.AddHttpClient<IJobPostingReader, GreenhouseReader>();
+builder.Services.AddHttpClient<IJobPostingReader, WorkdayReader>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
