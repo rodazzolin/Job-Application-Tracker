@@ -17,6 +17,14 @@ public static class DateDisplay
         return days == 0 ? "Today" : DayCount(days);
     }
 
+    // "Today" or "12 days" since a calendar date (e.g. AppliedAt), never negative.
+    // job-board.js has the same rule for cards it moves; keep the two in sync.
+    public static string DateAge(DateOnly date)
+    {
+        int days = Math.Max(0, DateOnly.FromDateTime(DateTime.Today).DayNumber - date.DayNumber);
+        return days == 0 ? "Today" : DayCount(days);
+    }
+
     // Relative text for a UTC timestamp: "just now", "5 minutes ago", "yesterday", "3 weeks ago".
     public static string Ago(DateTime utc)
     {

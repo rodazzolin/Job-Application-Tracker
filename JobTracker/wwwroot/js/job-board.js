@@ -115,6 +115,60 @@
             card.dataset.hasResponse = "true";
     }
 
+    // ---------- Ordering ----------
+    // Same rules as JobBoardSortExtensions.ApplySort (C#); keep the two in sync. Every sort breaks ties
+    // by most recently updated, and a card that was just moved is the most recently updated of all,
+    // so it goes before any card it ties with.
+    const sort = board.dataset.sort;
+    const titleCollator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+    const titleOf = card => card.querySelector(".job-card-title").textContent.trim();
+
+    // Whether the just-moved card `card` belongs before `other` in the list.
+    function goesBefore(card, other) {
+        switch (sort) {
+            case "Applied":
+                // "yyyy-mm-dd" strings compare like dates; no date ("") sorts after every date.
+                return (card.dataset.appliedAt ?? "") >= (other.dataset.appliedAt ?? "");
+            case "Title":
+                return titleCollator.compare(titleOf(card), titleOf(other)) <= 0;
+            default:   // "Updated"
+                return true;
+        }
+    }
+
+    // Puts the card before the first card it belongs ahead of (or at the end of the cards).
+    // The list may also hold non-card elements (the "Drag a card here" placeholder), which are skipped.
+    function insertSorted(list, card) {
+        const others = [...list.querySelectorAll(":scope > .job-card")].filter(c => c !== card);
+        const next = others.find(other => goesBefore(card, other));
+        if (next)
+            list.insertBefore(card, next);
+        else if (others.length > 0)
+            others[others.length - 1].after(card);
+        else
+            list.prepend(card);
+    }
+
+    // ---------- Card date label ----------
+    // Same rules as JobCardViewModel.AgeLabel (C#): follows the sort, like the card order does.
+    const dayCount = days => days === 1 ? "1 day" : `${days} days`;
+
+    // "Today" or "12 days" since a "yyyy-mm-dd" date, never negative (DateDisplay.DateAge).
+    function dateAge(dateString) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = Math.max(0, Math.round((today - new Date(`${dateString}T00:00`)) / 86_400_000));   // Round: DST days aren't 24h.
+        return days === 0 ? "Today" : dayCount(days);
+    }
+
+    function updateAgeLabel(card, ageLabel, statusChanged) {
+        if (sort === "Applied")
+            ageLabel.textContent = card.dataset.appliedAt ? dateAge(card.dataset.appliedAt) : "";
+        else if (sort === "Updated" && statusChanged)
+            ageLabel.textContent = "Today";   // Time in status restarts on a status change.
+        // "Title": no date label.
+    }
+
     async function saveStatus(id, status) {
         const body = new FormData();
         body.append("ID", id);
@@ -138,13 +192,12 @@
             hasResponse: card.dataset.hasResponse,
         };
 
-        // Update the UI first so the move feels instant. Lists are ordered by last update,
-        // so a moved card goes to the top of its new list.
-        if (status !== previous.status)
-            ageLabel.textContent = "Today";
+        // Update the UI first so the move feels instant. Summary rules run before placing the card,
+        // since they can change its AppliedAt (which the "Date applied" sort uses).
         setCardStatus(card, status);
         applySummaryRules(card, status);
-        listFor(status).prepend(card);
+        updateAgeLabel(card, ageLabel, status !== previous.status);
+        insertSorted(listFor(status), card);
         refreshCounts();
         card.classList.add("is-saving");
 
@@ -321,9 +374,10 @@
     archivedCollapse.addEventListener("shown.bs.collapse", () => { try { localStorage.setItem(storageKey, "true"); } catch { } });
     archivedCollapse.addEventListener("hidden.bs.collapse", () => { try { localStorage.removeItem(storageKey); } catch { } });
 
-    // Reload the board as soon as a different time range is picked.
-    const rangeForm = document.getElementById("range-form");
-    rangeForm.querySelector("select").addEventListener("change", () => rangeForm.submit());
+    // Reload the board as soon as a different time range or sort is picked.
+    const optionsForm = document.getElementById("board-options-form");
+    optionsForm.querySelectorAll("select").forEach(select =>
+        select.addEventListener("change", () => optionsForm.submit()));
 
     // Cards are links, which browsers let you drag as URLs. SortableJS uses its own pointer-based
     // dragging (forceFallback), so block the browser's native drag on cards entirely.

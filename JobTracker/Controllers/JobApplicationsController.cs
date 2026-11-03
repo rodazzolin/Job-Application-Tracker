@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using JobTracker.Data;
+using JobTracker.Helpers;
 using Microsoft.EntityFrameworkCore;
 using JobTracker.ViewModels;
 using JobTracker.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Security.Claims;
 using JobTracker.Services;
 using JobTracker.Services.JobPostings;
@@ -29,14 +31,18 @@ public class JobApplicationsController : Controller
         readers = rd;
     }
 
-    // Shows the user's jobs as a Kanban board, most recently updated first in each column.
-    // `range` comes from the query string (e.g. ?range=LastMonth) and limits jobs by UpdatedAt.
+    // Shows the user's jobs as a Kanban board.
+    // Both options come from the query string (e.g. ?range=LastMonth&sort=Title):
+    // `range` limits jobs by UpdatedAt, `sort` orders the cards within each column.
     [HttpGet]
-    public async Task<IActionResult> Index(JobBoardRange range = JobBoardRange.Last3Months)
+    public async Task<IActionResult> Index(JobBoardRange range = JobBoardRange.Last3Months, JobBoardSort sort = JobBoardSort.Updated)
     {
         // Fall back to the default on an unknown value (e.g. a hand-edited URL).
-        if(!ModelState.IsValid || !Enum.IsDefined(range))
+        // Checked per parameter, so a bad ?sort= doesn't also reset a good ?range=.
+        if(ModelState.GetFieldValidationState(nameof(range)) == ModelValidationState.Invalid || !Enum.IsDefined(range))
             range = JobBoardRange.Last3Months;
+        if(ModelState.GetFieldValidationState(nameof(sort)) == ModelValidationState.Invalid || !Enum.IsDefined(sort))
+            sort = JobBoardSort.Updated;
 
         // Fetches the user's jobs, optionally limited to the selected time range.
         IQueryable<JobApplication> query = context.JobApplications.Where(x => x.UserID == UserID);
@@ -46,8 +52,9 @@ public class JobApplicationsController : Controller
 
         // Project straight into card view models, so SQL only selects the columns the cards use.
         // StatusSince = latest status change, or CreatedAt if the status never changed.
+        // Sorting once here is enough: splitting into columns below keeps this order.
         List<JobCardViewModel> jobApplications = await query
-            .OrderByDescending(x => x.UpdatedAt)
+            .ApplySort(sort)
             .Select(x => new JobCardViewModel
             {
                 ID = x.ID,
@@ -57,6 +64,8 @@ public class JobApplicationsController : Controller
                 StatusSince = x.StatusChanges.Max(s => (DateTime?)s.Time) ?? x.CreatedAt,
                 Location = x.Location,
                 AppliedAt = x.AppliedAt,
+                // Becomes SQL SUBSTRING, so long notes aren't sent in full just for a short preview.
+                NotesStart = x.Notes == null ? null : x.Notes.Substring(0, TextDisplay.CardPreviewFetchLength),
                 // Becomes an EXISTS subquery in SQL, so there's still a single query.
                 HasResponse = x.Status == JobApplicationStatus.Interviewing
                     || x.Status == JobApplicationStatus.OfferReceived
@@ -81,6 +90,7 @@ public class JobApplicationsController : Controller
         JobBoardViewModel board = new()
         {
             Range = range,
+            Sort = sort,
             Columns =
             [
                 Column("Saved", JobApplicationStatus.Saved),

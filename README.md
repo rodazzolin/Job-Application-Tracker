@@ -9,6 +9,8 @@ You can check out a live deployment of the project [here](https://job-tracker-bw
 ## Features
 
 - **Kanban board.** Drag cards between stages (Saved, Applied, Interviewing, Offer Received, Archived), filtered by how recently each job was updated.
+- **Sorting.** Order the cards in each column by last update, date applied, or title. Each card's date label follows the sort: time in current status, time since applying, or none for title.
+- **Notes.** Keep free-form notes on each application. The start of the notes shows on its card.
 - **Summary stats.** Active applications, applications this week, response rate, and offers.
 - **Autofill from a link.** Paste a Greenhouse or Workday posting URL to fill in the title, company, location, and posted date.
 - **Status history.** Each application records when its status changed.

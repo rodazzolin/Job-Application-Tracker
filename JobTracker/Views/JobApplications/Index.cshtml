@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Application Tracker";
     JobApplicationStatus archived = JobApplicationStatus.Archived;
+    // Partials get a copy of ViewData, so each _JobCard can read the sort for its date label.
+    ViewData["BoardSort"] = Model.Sort;
 }
 
 @* Token the board script sends with each status update (anti-forgery). *@
@@ -12,12 +14,19 @@
     <div class="d-flex align-items-center gap-2">
         @if (Model.HasAnyJobs)
         {
-            @* GET form: changing the range reloads the board with ?range=... (auto-submitted by job-board.js). *@
-            <form id="range-form" method="get" asp-action="Index">
+            @* GET form: changing either option reloads the board with ?range=...&sort=... (auto-submitted by job-board.js).
+               Both selects are in one form so changing one keeps the other. *@
+            <form id="board-options-form" method="get" asp-action="Index" class="d-flex gap-2">
                 <select name="range" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Range)">
                     @foreach (JobBoardRange range in Enum.GetValues<JobBoardRange>())
                     {
                         <option value="@range" selected="@(range == Model.Range)">@range.GetDisplayName()</option>
+                    }
+                </select>
+                <select name="sort" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Sort)" title="@Html.DisplayNameFor(m => m.Sort)">
+                    @foreach (JobBoardSort sort in Enum.GetValues<JobBoardSort>())
+                    {
+                        <option value="@sort" selected="@(sort == Model.Sort)">@sort.GetDisplayName()</option>
                     }
                 </select>
                 <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
@@ -70,11 +79,12 @@ else
     {
         <p class="board-range-note">
             No jobs updated in the @Model.Range.GetDisplayName().ToLowerInvariant().
-            <a asp-action="Index" asp-route-range="@JobBoardRange.AllTime">Show all time</a>
+            <a asp-action="Index" asp-route-range="@JobBoardRange.AllTime" asp-route-sort="@Model.Sort">Show all time</a>
         </p>
     }
 
-    <div id="job-board" class="job-board"
+    @* data-sort tells job-board.js where a moved card belongs in its new list. *@
+    <div id="job-board" class="job-board" data-sort="@Model.Sort"
          data-update-url="@Url.Action("UpdateStatus")" data-delete-url="@Url.Action("DeleteFromBoard")">
         @foreach (JobBoardColumn column in Model.Columns)
         {

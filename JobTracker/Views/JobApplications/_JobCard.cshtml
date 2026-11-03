@@ -10,6 +10,8 @@
     ];
     JobApplicationStatus archived = JobApplicationStatus.Archived;
     bool isArchived = Model.Status == archived;
+    // Set by Index.cshtml; defaults to the board's default sort if the partial is used elsewhere.
+    JobBoardSort sort = ViewData["BoardSort"] as JobBoardSort? ?? JobBoardSort.Updated;
 }
 
 @* The card is a div, not a link, so it can hold the menu button. The title's stretched-link
@@ -60,11 +62,18 @@
     <a asp-action="Details" asp-route-id="@Model.ID" class="job-card-title stretched-link" draggable="false">@Model.Title</a>
 
     @* No status pill: the column (or the Archived section) and the card's colored edge already show it. *@
-    <div class="d-flex align-items-center gap-2 mt-2">
+    @* The age label is always rendered (even empty) so job-board.js can fill it in after a move,
+       e.g. a Saved card gets an applied date. The row hides itself when it has nothing to show (site.css). *@
+    <div class="job-card-meta d-flex align-items-center gap-2 mt-2">
         @if (!string.IsNullOrWhiteSpace(Model.Location))
         {
             <span class="job-card-location text-truncate">@Model.Location</span>
         }
-        <span class="job-card-age ms-auto" title="@Html.DisplayNameFor(m => m.StatusAgeLabel)">@Model.StatusAgeLabel</span>
+        <span class="job-card-age ms-auto" title="@JobCardViewModel.AgeTooltip(sort)">@Model.AgeLabel(sort)</span>
     </div>
+
+    @if (Model.NotesPreview is string notes)
+    {
+        <p class="job-card-notes"><span class="job-card-notes-label">@Html.DisplayNameFor(m => m.NotesPreview):</span> @notes</p>
+    }
 </div>

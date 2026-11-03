@@ -376,6 +376,8 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-gho
   font-size: .75rem;
   color: var(--bs-secondary-color);
 }
+/* No location and no date (e.g. a Saved card sorted by title): drop the row and its margin. */
+.job-card-meta:not(:has(> :not(:empty))) { display: none !important; }
 
 /* ---------- Autofill (Create page) ---------- */
 .autofill-box {
@@ -748,6 +750,22 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-gho
   font-size: .8rem;
   color: var(--bs-secondary-color);
 }
+
+/* Notes preview, already shortened on the server. The line clamp is a backstop
+   so a narrow column never shows more than two lines. */
+.job-card-notes {
+  margin: .5rem 0 0;
+  font-size: .8rem;
+  line-height: 1.4;
+  color: var(--bs-secondary-color);
+  overflow-wrap: anywhere;   /* A long URL in the notes shouldn't widen the card. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.job-card-notes-label { font-weight: 600; }
 
 /* With a mouse, the menu button appears on hover or keyboard focus; on touch screens it stays visible. */
 @media (hover: hover) and (pointer: fine) {

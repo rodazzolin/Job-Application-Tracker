@@ -25,8 +25,25 @@ public class JobCardViewModel
     [DisplayName("Got a response")]
     public required bool HasResponse {get; init;}
 
+    // The start of the job's notes (the query fetches only the first characters), or null if none.
+    public string? NotesStart {get; init;}
+    [DisplayName("Notes")]
+    public string? NotesPreview => TextDisplay.Preview(NotesStart);
+
     [DisplayName("Time in current status")]
     public string StatusAgeLabel => DateDisplay.StatusAge(StatusSince);
+
+    // The card's bottom-right label follows the board's sort: time in status for "Last updated",
+    // time since applying for "Date applied" (none if never applied), and nothing for "Title".
+    public string? AgeLabel(JobBoardSort sort) => sort switch
+    {
+        JobBoardSort.Applied => AppliedAt is DateOnly applied ? DateDisplay.DateAge(applied) : null,
+        JobBoardSort.Title => null,
+        _ => StatusAgeLabel,
+    };
+
+    public static string AgeTooltip(JobBoardSort sort) =>
+        sort == JobBoardSort.Applied ? "Time since applied" : "Time in current status";
 }
 
 // The numbers above the board, computed from the cards shown (so they follow the time range).
@@ -75,6 +92,8 @@ public class JobBoardViewModel
 {
     [DisplayName("Show jobs updated in")]
     public required JobBoardRange Range {get; init;}
+    [DisplayName("Sort cards by")]
+    public required JobBoardSort Sort {get; init;}
     public required List<JobBoardColumn> Columns {get; init;}
     public required List<JobCardViewModel> Archived {get; init;}
     public required JobBoardSummary Summary {get; init;}
