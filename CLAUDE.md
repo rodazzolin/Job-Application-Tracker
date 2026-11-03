@@ -34,3 +34,4 @@ I'm learning this stack: when a change introduces a backend concept I haven't us
 - Status values in the front end are enum *names* ("Saved", "Archived"), never integers: job-form.js (status pills) and job-board.js compare them as strings.
 - Folder is `View Models/` (with space); namespace is `JobTracker.ViewModels`.
 - Create/Edit share `JobApplicationFormViewModel` and `Views/Shared/_JobApplicationForm.cshtml`.
+- The startup command lives in Azure, not this repo.
