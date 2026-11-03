@@ -2,9 +2,9 @@
 
 A web app for keeping track of a job search. Save postings, log applications, and move each one across a board as it goes from saved to applied, interviewing, offer, or archived.
 
-**Live demo:** [job-tracker on Azure](https://job-tracker-bwcqc3etb8ggd9g9.westus3-01.azurewebsites.net)
+You can check out a live deployment of the project [here](https://job-tracker-bwcqc3etb8ggd9g9.westus3-01.azurewebsites.net)
 
-![Dashboard screenshot](docs/dashboard.png)
+![Dashboard screenshot](JobTracker/Static/screenshot_dashboard.png)
 
 ## Features
 
