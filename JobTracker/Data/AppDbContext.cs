@@ -13,6 +13,7 @@ public class AppDbContext : IdentityDbContext
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
     public DbSet<JobApplicationStatusChange> StatusChanges => Set<JobApplicationStatusChange>();
+    public DbSet<IdentityUser> AspNetUsers => Set<IdentityUser>();
 
     // Settings.
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
