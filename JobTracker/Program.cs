@@ -19,6 +19,7 @@ builder.Services.ConfigureHttpClientDefaults(http =>
     http.ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10)));
 builder.Services.AddHttpClient<IJobPostingReader, GreenhouseReader>();
 builder.Services.AddHttpClient<IJobPostingReader, WorkdayReader>();
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -44,4 +45,5 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 app.MapRazorPages();
+app.MapHealthChecks("/health");
 app.Run();
