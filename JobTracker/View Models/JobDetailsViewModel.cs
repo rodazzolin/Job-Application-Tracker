@@ -21,6 +21,7 @@ public class JobDetailsViewModel
     public required string Title {get; init;}
     [DisplayName("Company")]
     public required string CompanyName {get; init;}
+    public required int CompanyID {get; init;}
     public required JobApplicationStatus Status {get; init;}
     public string? Location {get; init;}
     [DisplayName("Posting URL")]
@@ -81,6 +82,7 @@ public class JobDetailsViewModel
             ID = job.ID,
             Title = job.Title,
             CompanyName = job.Company.Name,
+            CompanyID = job.CompanyID,
             Status = job.Status,
             Location = job.Location,
             PostingURL = job.PostingURL,

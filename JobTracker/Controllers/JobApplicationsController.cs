@@ -51,27 +51,10 @@ public class JobApplicationsController : Controller
             query = query.Where(x => x.UpdatedAt >= cutoff);
 
         // Project straight into card view models, so SQL only selects the columns the cards use.
-        // StatusSince = latest status change, or CreatedAt if the status never changed.
         // Sorting once here is enough: splitting into columns below keeps this order.
         List<JobCardViewModel> jobApplications = await query
             .ApplySort(sort)
-            .Select(x => new JobCardViewModel
-            {
-                ID = x.ID,
-                Title = x.Title,
-                CompanyName = x.Company.Name,
-                Status = x.Status,
-                StatusSince = x.StatusChanges.Max(s => (DateTime?)s.Time) ?? x.CreatedAt,
-                Location = x.Location,
-                AppliedAt = x.AppliedAt,
-                // Becomes SQL SUBSTRING, so long notes aren't sent in full just for a short preview.
-                NotesStart = x.Notes == null ? null : x.Notes.Substring(0, TextDisplay.CardPreviewFetchLength),
-                // Becomes an EXISTS subquery in SQL, so there's still a single query.
-                HasResponse = x.Status == JobApplicationStatus.Interviewing
-                    || x.Status == JobApplicationStatus.OfferReceived
-                    || x.StatusChanges.Any(s => s.NewStatus == JobApplicationStatus.Interviewing
-                                             || s.NewStatus == JobApplicationStatus.OfferReceived),
-            })
+            .Select(JobCardViewModel.FromJob)
             .ToListAsync();
 
         // Only worth a second query when the range shows nothing: are there jobs outside it?

@@ -1,0 +1,50 @@
+@model JobCardViewModel
+@{
+    // Statuses under "Move to", in board order (enum order differs). Archived is under "Actions".
+    JobApplicationStatus[] moveStatuses =
+    [
+        JobApplicationStatus.Saved,
+        JobApplicationStatus.Applied,
+        JobApplicationStatus.Interviewing,
+        JobApplicationStatus.OfferReceived,
+    ];
+    JobApplicationStatus archived = JobApplicationStatus.Archived;
+    bool isArchived = Model.Status == archived;
+}
+
+@* A job's "⋯" menu: move to a status, edit, archive, delete. Used by the board's cards (_JobCard) and the
+   company page's table. The page's script handles the clicks: job-board.js or company-jobs.js. *@
+<div class="dropdown job-card-menu">
+    @* Fixed positioning lets the menu escape a scroll area (a board column, a scrolling table) instead of being clipped by it. *@
+    <button type="button" class="job-card-menu-button" data-bs-toggle="dropdown"
+            data-bs-popper-config='{"strategy":"fixed"}'
+            aria-expanded="false" aria-label="Job actions" title="Job actions">&#x22EF;</button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">Move to</h6></li>
+        @foreach (JobApplicationStatus status in moveStatuses)
+        {
+            bool isCurrent = status == Model.Status;
+            <li>
+                <button type="button" class="dropdown-item @(isCurrent ? "active" : "")"
+                        data-status="@status"
+                        disabled="@isCurrent" aria-current="@(isCurrent ? "true" : null)">
+                    @status.GetDisplayName()
+                </button>
+            </li>
+        }
+
+        <li><hr class="dropdown-divider"></li>
+        <li><h6 class="dropdown-header">Actions</h6></li>
+        @* asp-controller is set because this partial is also used outside JobApplications. *@
+        <li><a asp-controller="JobApplications" asp-action="Edit" asp-route-id="@Model.ID" class="dropdown-item" draggable="false">Edit…</a></li>
+        @* Archive is a status change, so it keeps data-status and is handled like the items above. *@
+        <li>
+            <button type="button" class="dropdown-item @(isArchived ? "active" : "")"
+                    data-status="@archived"
+                    disabled="@isArchived" aria-current="@(isArchived ? "true" : null)">
+                Archive
+            </button>
+        </li>
+        <li><button type="button" class="dropdown-item text-danger" data-action="delete">Delete…</button></li>
+    </ul>
+</div>

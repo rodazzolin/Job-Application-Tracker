@@ -12,7 +12,8 @@
         <span class="company-monogram company-monogram-lg">@char.ToUpperInvariant(Model.CompanyName[0])</span>
 
         <div class="details-heading">
-            <div class="details-company">@Model.CompanyName</div>
+            <a asp-controller="Companies" asp-action="Details" asp-route-id="@Model.CompanyID"
+               class="details-company text-decoration-none">@Model.CompanyName</a>
             <h1 class="page-title mb-2">@Model.Title</h1>
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <span class="status-badge">@Model.Status.GetDisplayName()</span>

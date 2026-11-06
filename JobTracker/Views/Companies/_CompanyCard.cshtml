@@ -1,0 +1,47 @@
+@model CompanyCardViewModel
+@{
+    CompanyStatusCounts counts = Model.Counts;
+    string StatusClass(JobApplicationStatus status) => "status-" + status.ToString().ToLowerInvariant();
+}
+
+@* Like a job card: the name's stretched-link makes the whole card open the company page. *@
+<article class="company-card">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="company-monogram">@char.ToUpperInvariant(Model.Name[0])</span>
+        <a asp-action="Details" asp-route-id="@Model.ID" class="company-card-name stretched-link text-truncate">@Model.Name</a>
+    </div>
+
+    <div class="d-flex align-items-baseline gap-2 mb-2">
+        <span class="summary-value">@counts.Total</span>
+        <span class="text-body-secondary">@(counts.Total == 1 ? "posting" : "postings")</span>
+        <span class="small text-body-secondary ms-auto">@counts.Active active</span>
+    </div>
+
+    @* Status bar: one colored segment per status, sized by its share. The legend below carries the
+       same numbers as text, so the bar is hidden from screen readers. *@
+    <div class="company-status-bar mb-2" aria-hidden="true">
+        @foreach (JobApplicationStatus status in CompanyStatusCounts.DisplayOrder)
+        {
+            int count = counts.Count(status);
+            if (count > 0)
+            {
+                <span class="@StatusClass(status)" style="flex-grow: @count"></span>
+            }
+        }
+    </div>
+
+    <ul class="company-legend">
+        @foreach (JobApplicationStatus status in CompanyStatusCounts.DisplayOrder)
+        {
+            int count = counts.Count(status);
+            if (count > 0)
+            {
+                <li class="@StatusClass(status)">@count @status.GetDisplayName()</li>
+            }
+        }
+    </ul>
+
+    <div class="company-card-footer" title="@DateDisplay.Full(Model.LastActivity)">
+        @Html.DisplayNameFor(m => m.LastActivity) @DateDisplay.Ago(Model.LastActivity)
+    </div>
+</article>

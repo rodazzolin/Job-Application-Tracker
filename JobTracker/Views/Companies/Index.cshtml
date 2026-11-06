@@ -1,0 +1,30 @@
+@model CompanyIndexViewModel
+@{
+    ViewData["Title"] = "Companies";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <h1 class="page-title mb-0">Companies</h1>
+    <a asp-controller="JobApplications" asp-action="Create" class="btn btn-primary text-nowrap">+ Add job</a>
+</div>
+
+@if (Model.Companies.Count == 0)
+{
+    <section class="board-welcome">
+        <h2 class="section-title mb-2">No companies yet</h2>
+        <p class="text-body-secondary mb-4">Companies show up here as soon as you add a job for them.</p>
+        <a asp-controller="JobApplications" asp-action="Create" class="btn btn-primary btn-lg">+ Add your first job</a>
+    </section>
+}
+else
+{
+    <p class="text-body-secondary mb-3">
+        @Model.Companies.Count @(Model.Companies.Count == 1 ? "company" : "companies"), most recently active first.
+    </p>
+    <div class="company-grid">
+        @foreach (CompanyCardViewModel company in Model.Companies)
+        {
+            <partial name="_CompanyCard" model="company" />
+        }
+    </div>
+}

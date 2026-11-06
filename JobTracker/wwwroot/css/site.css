@@ -776,6 +776,8 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-list:has(.job-card-gho
 
   .job-card:hover .job-card-menu-button,
   .job-card:focus-within .job-card-menu-button,
+  .company-job-row:hover .job-card-menu-button,
+  .company-job-row:focus-within .job-card-menu-button,
   .job-card-menu-button[aria-expanded="true"] {
     opacity: 1;
   }
@@ -891,4 +893,134 @@ body.is-dragging-job:not(.is-dragging-archived) #archived-collapse {
   margin: 0;
   font-size: .9rem;
   color: var(--bs-secondary-color);
+}
+
+/* ---------- Companies ---------- */
+.company-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+/* Like a job card, with a neutral edge instead of a status color. */
+.company-card {
+  position: relative;   /* Anchors the name's stretched-link overlay. */
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.15rem;
+  border-left: 3px solid var(--bs-link-color);
+  border-radius: .5rem;
+  background-color: var(--bs-body-bg);
+  box-shadow: var(--card-shadow);
+  transition: background-color .15s ease, box-shadow .15s ease;
+}
+
+.company-card:hover,
+.company-card:has(.stretched-link:focus-visible) {
+  background-color: var(--bs-secondary-bg);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.company-card:has(.stretched-link:focus-visible) {
+  outline: 2px solid var(--bs-link-color);
+  outline-offset: 2px;
+}
+
+.company-card .stretched-link:focus-visible { outline: none; }
+
+.company-card-name {
+  min-width: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--bs-emphasis-color);
+  text-decoration: none;
+}
+
+.company-card-name:hover { color: var(--bs-emphasis-color); }
+
+/* A thin bar split into status-colored segments; each segment's flex-grow is its job count. */
+.company-status-bar {
+  display: flex;
+  gap: 2px;
+  height: .4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--bs-secondary-bg);
+}
+
+.company-status-bar > span {
+  flex-basis: 0;
+  background-color: var(--status-color);
+}
+
+.company-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .15rem .85rem;
+  margin: 0 0 .75rem;
+  padding: 0;
+  list-style: none;
+  font-size: .8rem;
+  color: var(--bs-secondary-color);
+}
+
+/* A colored dot before each legend entry, matching its bar segment. */
+.company-legend li::before {
+  content: "";
+  display: inline-block;
+  width: .5rem;
+  height: .5rem;
+  margin-right: .35rem;
+  border-radius: 50%;
+  background-color: var(--status-color);
+}
+
+.company-card-footer {
+  margin-top: auto;   /* Pins the footer to the bottom, so cards in a row line up. */
+  font-size: .75rem;
+  color: var(--bs-secondary-color);
+}
+
+/* Company page header: the job Details header, with a neutral edge. */
+.company-header { --status-color: var(--bs-link-color); }
+
+.company-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.company-filters input[type="search"] { flex: 1 1 14rem; }
+.company-filters .form-select { flex: 0 1 auto; width: auto; }
+
+/* Each row gets its status color as a thin left edge, like the board's cards. */
+.company-jobs tbody td:first-child { box-shadow: inset 3px 0 0 var(--status-color); }
+
+.company-job-title {
+  font-weight: 600;
+  color: var(--bs-emphasis-color);
+  text-decoration: none;
+}
+
+.company-job-title:hover { text-decoration: underline; }
+
+.company-job-notes {
+  max-width: 32rem;
+  overflow: hidden;
+  font-size: .8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--bs-secondary-color);
+}
+
+/* The "⋯" menu column: as narrow as the button. */
+.company-jobs td:last-child { width: 1%; }
+.company-jobs .job-card-menu { margin: 0; }
+
+/* A row whose status change or delete is being saved. */
+.company-job-row.is-saving {
+  opacity: .6;
+  pointer-events: none;
 }

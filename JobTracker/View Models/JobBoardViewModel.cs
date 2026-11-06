@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Linq.Expressions;
 using JobTracker.Helpers;
 using JobTracker.Models;
 namespace JobTracker.ViewModels;
@@ -44,6 +45,28 @@ public class JobCardViewModel
 
     public static string AgeTooltip(JobBoardSort sort) =>
         sort == JobBoardSort.Applied ? "Time since applied" : "Time in current status";
+
+    // Turns a job into a card inside a query: `query.Select(JobCardViewModel.FromJob)`.
+    // It's an Expression (a description of the code, not compiled code), so EF can translate it
+    // into SQL and select only the columns the card uses. Shared by the board and the company page.
+    public static readonly Expression<Func<JobApplication, JobCardViewModel>> FromJob = x => new JobCardViewModel
+    {
+        ID = x.ID,
+        Title = x.Title,
+        CompanyName = x.Company.Name,
+        Status = x.Status,
+        // Latest status change, or CreatedAt if the status never changed.
+        StatusSince = x.StatusChanges.Max(s => (DateTime?)s.Time) ?? x.CreatedAt,
+        Location = x.Location,
+        AppliedAt = x.AppliedAt,
+        // Becomes SQL SUBSTRING, so long notes aren't sent in full just for a short preview.
+        NotesStart = x.Notes == null ? null : x.Notes.Substring(0, TextDisplay.CardPreviewFetchLength),
+        // Becomes an EXISTS subquery in SQL, so there's still a single query.
+        HasResponse = x.Status == JobApplicationStatus.Interviewing
+            || x.Status == JobApplicationStatus.OfferReceived
+            || x.StatusChanges.Any(s => s.NewStatus == JobApplicationStatus.Interviewing
+                                     || s.NewStatus == JobApplicationStatus.OfferReceived),
+    };
 }
 
 // The numbers above the board, computed from the cards shown (so they follow the time range).

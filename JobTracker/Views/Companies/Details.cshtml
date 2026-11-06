@@ -1,0 +1,178 @@
+@model CompanyDetailsViewModel
+@{
+    ViewData["Title"] = Model.Name;
+    string StatusClass(JobApplicationStatus status) => "status-" + status.ToString().ToLowerInvariant();
+}
+
+@* Token company-jobs.js sends with each status change or delete (anti-forgery). *@
+@Html.AntiForgeryToken()
+
+<div class="details-page">
+    <a asp-action="Index" class="back-link">&larr; Companies</a>
+
+    <header class="details-header company-header">
+        <span class="company-monogram company-monogram-lg">@char.ToUpperInvariant(Model.Name[0])</span>
+        <div class="details-heading">
+            <h1 class="page-title mb-1">@Model.Name</h1>
+            <div class="small text-body-secondary" title="@DateDisplay.Full(Model.LastActivity)">
+                @Html.DisplayNameFor(m => m.LastActivity) @DateDisplay.Ago(Model.LastActivity)
+            </div>
+        </div>
+    </header>
+
+    @* Numbers for all of this company's jobs (not just the filtered ones). *@
+    <section class="summary-strip" aria-label="Summary">
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Counts.Total)</div>
+            <div class="summary-value">@Model.Counts.Total</div>
+            <div class="summary-hint">@Model.Counts.Active active</div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">Applied</div>
+            <div class="summary-value">@Model.Summary.AppliedCount</div>
+            <div class="summary-hint">@Model.Summary.AppliedThisWeek in the last 7 days</div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Summary.ResponseRate)</div>
+            <div class="summary-value">@(Model.Summary.ResponseRate is int rate ? $"{rate}%" : "—")</div>
+            <div class="summary-hint">
+                @(Model.Summary.AppliedCount == 0
+                    ? "no applications yet"
+                    : $"{Model.Summary.RespondedCount} of {Model.Summary.AppliedCount} reached interviews")
+            </div>
+        </div>
+        <div class="fact">
+            <div class="fact-label">@Html.DisplayNameFor(m => m.Summary.Offers)</div>
+            <div class="summary-value">@Model.Summary.Offers</div>
+            <div class="summary-hint">received</div>
+        </div>
+    </section>
+
+    <section aria-labelledby="postings-title">
+        <h2 id="postings-title" class="section-title mb-3">Postings</h2>
+
+        @* GET form: filters go in the URL (?search=...&status=...&sort=...), so a filtered view can be
+           bookmarked or reloaded. The selects submit on change (script below); the search box on Enter. *@
+        <form id="company-filter-form" method="get" asp-action="Details" asp-route-id="@Model.ID"
+              class="company-filters" role="search">
+            <input type="search" name="search" value="@Model.Search" class="form-control"
+                   placeholder="Search title or location" aria-label="@Html.DisplayNameFor(m => m.Search)" />
+            <select name="status" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Status)">
+                <option value="" selected="@(Model.Status is null)">All statuses (@Model.Counts.Total)</option>
+                @foreach (JobApplicationStatus status in CompanyStatusCounts.DisplayOrder)
+                {
+                    <option value="@status" selected="@(status == Model.Status)">@status.GetDisplayName() (@Model.Counts.Count(status))</option>
+                }
+            </select>
+            <select name="sort" class="form-select" aria-label="@Html.DisplayNameFor(m => m.Sort)" title="@Html.DisplayNameFor(m => m.Sort)">
+                @foreach (JobBoardSort sort in Enum.GetValues<JobBoardSort>())
+                {
+                    <option value="@sort" selected="@(sort == Model.Sort)">@sort.GetDisplayName()</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-outline-secondary">Filter</button>
+            @if (Model.HasFilters)
+            {
+                @* Keeps the sort, drops the filters. *@
+                <a asp-action="Details" asp-route-id="@Model.ID" asp-route-sort="@Model.Sort" class="btn btn-link px-1">Clear</a>
+            }
+        </form>
+
+        @if (Model.Jobs.Count == 0)
+        {
+            <p class="notes-empty">
+                No postings match these filters.
+                <a asp-action="Details" asp-route-id="@Model.ID" asp-route-sort="@Model.Sort">Clear filters</a>
+            </p>
+        }
+        else
+        {
+            @if (Model.HasFilters)
+            {
+                <p class="small text-body-secondary mb-2">Showing @Model.Jobs.Count of @Model.Counts.Total.</p>
+            }
+            @* data-total: when the last job is deleted the company goes too, so company-jobs.js goes back to the list. *@
+            <div class="table-responsive">
+                <table id="company-jobs" class="table table-hover align-middle company-jobs"
+                       data-update-url="@Url.Action("UpdateStatus", "JobApplications")"
+                       data-delete-url="@Url.Action("DeleteFromBoard", "JobApplications")"
+                       data-companies-url="@Url.Action("Index")" data-total="@Model.Counts.Total">
+                    <thead>
+                        <tr>
+                            <th scope="col">Job</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Applied</th>
+                            <th scope="col">In status</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (JobCardViewModel job in Model.Jobs)
+                        {
+                            <tr class="company-job-row @StatusClass(job.Status)" data-id="@job.ID" data-status="@job.Status">
+                                <td>
+                                    <a asp-controller="JobApplications" asp-action="Details" asp-route-id="@job.ID" class="company-job-title">@job.Title</a>
+                                    @if (job.NotesPreview is string notes)
+                                    {
+                                        <div class="company-job-notes">@notes</div>
+                                    }
+                                </td>
+                                <td><span class="status-badge text-nowrap">@job.Status.GetDisplayName()</span></td>
+                                <td class="text-body-secondary">@(job.Location ?? "—")</td>
+                                <td class="text-nowrap">
+                                    @if (job.AppliedAt is DateOnly applied)
+                                    {
+                                        <span title="@DateDisplay.Full(applied)">@DateDisplay.Ago(applied)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-body-secondary">Not yet</span>
+                                    }
+                                </td>
+                                <td class="text-nowrap text-body-secondary" title="Since @DateDisplay.Full(job.StatusSince)">@job.StatusAgeLabel</td>
+                                <td class="text-end"><partial name="_JobMenu" model="job" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+@* Delete confirmation, opened from a row's menu. company-jobs.js fills in the job's title. *@
+<div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="delete-modal-title">Delete job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Delete <strong><span id="delete-job-label"></span> at @Model.Name</strong>? This also removes its status history and can't be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="delete-confirm">
+                    <span class="spinner-border spinner-border-sm d-none me-1" aria-hidden="true"></span>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Error toast for failed updates. company-jobs.js sets the message. *@
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="company-toast" class="toast text-bg-danger border-0" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body" id="company-toast-message">Couldn't update the job. Please try again.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/company-jobs.js" asp-append-version="true"></script>
+}
